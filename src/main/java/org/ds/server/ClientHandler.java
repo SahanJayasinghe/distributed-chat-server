@@ -1,5 +1,6 @@
 package org.ds.server;
 
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -75,7 +76,7 @@ public class ClientHandler extends Thread {
     public void handleRequest(JSONObject request) {
         String msgType = (String) request.get("type");
         JSONObject response = new JSONObject();
-        if ("newidentity".equals(msgType)) {
+        if (msgType.equals("newidentity")) {
             String clientId = (String) request.get("identity");
             response.put("type", "newidentity");
             if (ServerState.isClientIdUnique(clientId)) {
@@ -89,6 +90,22 @@ public class ClientHandler extends Thread {
                 response.put("approved", "false");
                 sendMessage(response);
             }
+        }
+        else if (msgType.equals("list")) {
+            JSONArray roomList = new JSONArray();
+            roomList.addAll(ServerState.getRoomList());
+            response.put("type", "roomlist");
+            response.put("rooms", roomList);
+            sendMessage(response);
+        }
+        else if (msgType.equals("who")) {
+            JSONArray members = new JSONArray();
+            members.addAll(ServerState.getRoomMembers(joinedRoomId));
+            response.put("type", "roomcontents");
+            response.put("roomid", joinedRoomId);
+            response.put("identities", members);
+            response.put("owner", ServerState.getRoomOwner(joinedRoomId));
+            sendMessage(response);
         }
     }
 

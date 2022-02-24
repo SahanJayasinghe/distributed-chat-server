@@ -25,6 +25,12 @@ public class ChatRoom {
         return roomId;
     }
 
+    public String getOwnerId() {
+        if (owner == null)
+            return "";
+        return owner.getClientId();
+    }
+
     public void addMember(ClientHandler client) {
         members.add(client);
         JSONObject msg = client.changeRoom(roomId);
@@ -40,5 +46,13 @@ public class ChatRoom {
             if (clientHandler.getClientId().equals(exceptId))
                 clientHandler.sendMessage(msg);
         });
+    }
+
+    public ArrayList<String> getMemberIds() {
+        ArrayList<String> memberIds = new ArrayList<>();
+        members.forEach(clientHandler -> {
+            memberIds.add(clientHandler.getClientId());
+        });
+        return memberIds;
     }
 }

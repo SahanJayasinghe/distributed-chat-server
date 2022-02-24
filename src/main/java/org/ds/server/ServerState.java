@@ -1,7 +1,9 @@
 package org.ds.server;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Set;
 
 public class ServerState {
     private static String mainHallId;
@@ -40,5 +42,17 @@ public class ServerState {
             ChatRoom joiningRoom = rooms.get(roomId);
             joiningRoom.addMember(client);
         }
+    }
+
+    public static ArrayList<String> getRoomMembers(String roomId) {
+        return rooms.get(roomId).getMemberIds();
+    }
+
+    public static Set<String> getRoomList() {
+        return rooms.keySet();
+    }
+
+    public static String getRoomOwner(String roomId) {
+        return rooms.get(roomId).getOwnerId();
     }
 }
