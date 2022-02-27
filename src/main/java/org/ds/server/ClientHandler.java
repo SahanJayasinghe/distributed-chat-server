@@ -79,16 +79,17 @@ public class ClientHandler extends Thread {
         if (msgType.equals("newidentity")) {
             String clientId = (String) request.get("identity");
             response.put("type", "newidentity");
-            if (ServerState.isClientIdUnique(clientId)) {
-                response.put("approved", "true");
-                this.clientId = clientId;
-                sendMessage(response);
-                ServerState.addClientId(this.clientId);
-                ServerState.addMemberToRoom(this, ServerState.getMainHallId());
-            }
-            else {
-                response.put("approved", "false");
-                sendMessage(response);
+            synchronized (this) {
+                if (ServerState.isClientIdUnique(clientId)) {
+                    response.put("approved", "true");
+                    this.clientId = clientId;
+                    sendMessage(response);
+                    ServerState.addClientId(this.clientId);
+                    ServerState.addMemberToRoom(this, ServerState.getMainHallId());
+                } else {
+                    response.put("approved", "false");
+                    sendMessage(response);
+                }
             }
         }
         else if (msgType.equals("list")) {
@@ -106,6 +107,36 @@ public class ClientHandler extends Thread {
             response.put("identities", members);
             response.put("owner", ServerState.getRoomOwner(joinedRoomId));
             sendMessage(response);
+        }
+        else if (msgType.equals("createroom")) {
+            String roomId = (String) request.get("roomid");
+            response.put("type", "createroom");
+            response.put("roomid", roomId);
+            synchronized (this) {
+                if (this.ownedRoomId == null && ServerState.isRoomIdUnique(roomId)) {
+                    response.put("approved", "true");
+                    sendMessage(response);
+                    ChatRoom newChatRoom = new ChatRoom(roomId, this);
+                    this.ownedRoomId = roomId;
+                    ServerState.addRoom(newChatRoom);
+
+                    JSONObject broadcastMsg = new JSONObject();
+                    broadcastMsg.put("type", "roomchange");
+                    broadcastMsg.put("identity", this.clientId);
+                    broadcastMsg.put("former", this.joinedRoomId);
+                    broadcastMsg.put("roomid", this.ownedRoomId);
+                    ChatRoom formerRoom = ServerState.getRoom(this.joinedRoomId);
+                    formerRoom.removeMember(this);
+                    formerRoom.broadcast(broadcastMsg);
+//                    ServerState.addMemberToRoom(this, ownedRoomId);
+                    newChatRoom.addMember(this);
+                    joinedRoomId = ownedRoomId;
+                }
+                else {
+                    response.put("approved", "false");
+                    sendMessage(response);
+                }
+            }
         }
     }
 

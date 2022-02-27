@@ -3,22 +3,25 @@ package org.ds.server;
 import org.json.simple.JSONObject;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 public class ChatRoom {
     private String roomId;
     private ClientHandler owner;
-    private ArrayList<ClientHandler> members;
+    private HashMap<String, ClientHandler> members;
 
     public ChatRoom(String roomId) {
         this.roomId = roomId;
         this.owner = null;
-        this.members = new ArrayList<>();
+        this.members = new HashMap<>();
     }
 
     public ChatRoom(String roomId, ClientHandler owner) {
         this.roomId = roomId;
         this.owner = owner;
-        this.members = new ArrayList<>();
+        this.members = new HashMap<>();
     }
 
     public String getRoomId() {
@@ -32,27 +35,30 @@ public class ChatRoom {
     }
 
     public void addMember(ClientHandler client) {
-        members.add(client);
+        members.put(client.getClientId(), client);
         JSONObject msg = client.changeRoom(roomId);
         broadcast(msg);
     }
 
+    public void removeMember(ClientHandler client) {
+        members.remove(client.getClientId());
+    }
+
     public void broadcast(JSONObject msg) {
-        this.members.forEach(clientHandler -> {clientHandler.sendMessage(msg);});
+        for (Map.Entry<String, ClientHandler> entry : members.entrySet()) {
+            entry.getValue().sendMessage(msg);
+        }
     }
 
     public void broadcast(JSONObject msg, String exceptId) {
-        this.members.forEach(clientHandler -> {
-            if (clientHandler.getClientId().equals(exceptId))
-                clientHandler.sendMessage(msg);
-        });
+        for (Map.Entry<String, ClientHandler> entry : members.entrySet()) {
+            if (!entry.getKey().equals(exceptId)) {
+                entry.getValue().sendMessage(msg);
+            }
+        }
     }
 
-    public ArrayList<String> getMemberIds() {
-        ArrayList<String> memberIds = new ArrayList<>();
-        members.forEach(clientHandler -> {
-            memberIds.add(clientHandler.getClientId());
-        });
-        return memberIds;
+    public Set<String> getMemberIds() {
+        return members.keySet();
     }
 }

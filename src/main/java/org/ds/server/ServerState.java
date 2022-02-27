@@ -21,30 +21,34 @@ public class ServerState {
         return mainHallId;
     }
 
-    public static boolean isClientIdUnique(String id) {
+    public static synchronized boolean isClientIdUnique(String id) {
         return !clientIds.contains(id);
     }
 
-    public static void addClientId(String id) {
+    public static synchronized void addClientId(String id) {
         clientIds.add(id);
     }
 
-    public static boolean isRoomIdUnique(String id) {
+    public static synchronized boolean isRoomIdUnique(String id) {
         return !rooms.containsKey(id);
     }
 
-    public static void addRoom(ChatRoom room) {
+    public static synchronized void addRoom(ChatRoom room) {
         rooms.put(room.getRoomId(), room);
     }
 
-    public static void addMemberToRoom(ClientHandler client, String roomId) {
+    public static synchronized void addMemberToRoom(ClientHandler client, String roomId) {
         if (rooms.containsKey(roomId)) {
             ChatRoom joiningRoom = rooms.get(roomId);
             joiningRoom.addMember(client);
         }
     }
 
-    public static ArrayList<String> getRoomMembers(String roomId) {
+    public static ChatRoom getRoom(String roomId) {
+        return rooms.get(roomId);
+    }
+
+    public static Set<String> getRoomMembers(String roomId) {
         return rooms.get(roomId).getMemberIds();
     }
 
