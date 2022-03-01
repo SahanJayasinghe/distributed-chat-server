@@ -26,3 +26,5 @@ target/
 .idea/
 out/
 /src/main/java/META-INF/
+
+distributed-chat-server.iml
