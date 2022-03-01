@@ -8,6 +8,7 @@ import org.json.simple.parser.ParseException;
 import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.regex.Pattern;
 
 public class ClientHandler extends Thread {
     private String clientId = null;
@@ -112,8 +113,10 @@ public class ClientHandler extends Thread {
             String roomId = (String) request.get("roomid");
             response.put("type", "createroom");
             response.put("roomid", roomId);
+            String regex = "^[a-zA-Z]{1}[a-zA-Z0-9]{2,15}$";
+            boolean isMatched = Pattern.matches(regex, roomId);
             synchronized (this) {
-                if (this.ownedRoomId == null && ServerState.isRoomIdUnique(roomId)) {
+                if (isMatched && this.ownedRoomId == null && ServerState.isRoomIdUnique(roomId)) {
                     response.put("approved", "true");
                     sendMessage(response);
                     ChatRoom newChatRoom = new ChatRoom(roomId, this);
@@ -138,15 +141,32 @@ public class ClientHandler extends Thread {
                 }
             }
         }
+        else if (msgType.equals("joinroom")) {
+            String roomId = (String) request.get("roomid");
+            boolean alreadyIn = roomId.equals(joinedRoomId);
+            if (!alreadyIn && this.ownedRoomId == null && !ServerState.isRoomIdUnique(roomId)) {
+                ChatRoom formerRoom = ServerState.getRoom(joinedRoomId);
+                formerRoom.removeMember(this);
+                formerRoom.broadcast(getChangeRoomMsg(roomId));
+                ServerState.addMemberToRoom(this, roomId);
+            }
+            else {
+                sendMessage(getChangeRoomMsg(joinedRoomId));
+            }
+        }
     }
 
-    public JSONObject changeRoom(String newRoomId) {
+    public void setJoinedRoomId(String roomId) {
+        joinedRoomId = roomId;
+    }
+
+    public JSONObject getChangeRoomMsg(String newRoomId) {
         JSONObject response = new JSONObject();
         response.put("type", "roomchange");
         response.put("identity", clientId);
         response.put("former", joinedRoomId);
         response.put("roomid", newRoomId);
-        joinedRoomId = newRoomId;
+//        joinedRoomId = newRoomId;
 //        out.write((response.toJSONString() + "\n").getBytes(StandardCharsets.UTF_8));
 //        out.flush();
         return response;
