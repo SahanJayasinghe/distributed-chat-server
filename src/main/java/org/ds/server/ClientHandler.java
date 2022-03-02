@@ -108,6 +108,9 @@ public class ClientHandler extends Thread {
             response.put("owner", ServerState.getRoomOwner(joinedRoomId));
             sendMessage(response);
         }
+        else if (msgType.equals("quit")) {
+
+        }
         else if (msgType.equals("createroom")) {
             String roomId = (String) request.get("roomid");
             response.put("type", "createroom");
