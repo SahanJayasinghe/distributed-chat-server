@@ -110,7 +110,23 @@ public class ClientHandler extends Thread {
             sendMessage(response);
         }
         else if (msgType.equals("quit")) {
+            ChatRoom currentRoom = ServerState.getRoom(joinedRoomId);
+            currentRoom.removeMember(this);
+            ServerState.removeMemberFromRoom(this, joinedRoomId);
+            ServerState.removeClientId(this.clientId);
 
+            response.put("type", "roomchange");
+            response.put("roomid", "");
+            response.put("identity", clientId);
+            response.put("former", joinedRoomId);
+            sendMessage(response);
+
+            JSONObject broadcastMsg = new JSONObject();
+            broadcastMsg.put("type", "roomchange");
+            broadcastMsg.put("roomid", "");
+            broadcastMsg.put("identity", clientId);
+            broadcastMsg.put("former", joinedRoomId);
+            currentRoom.broadcast(broadcastMsg);
         }
         else if (msgType.equals("createroom")) {
             String roomId = (String) request.get("roomid");

@@ -28,6 +28,10 @@ public class ServerState {
         clientIds.add(id);
     }
 
+    public static synchronized void removeClientId(String id) {
+        clientIds.remove(id);
+    }
+
     public static synchronized boolean isRoomIdUnique(String id) {
         return !rooms.containsKey(id);
     }
@@ -40,6 +44,13 @@ public class ServerState {
         if (rooms.containsKey(roomId)) {
             ChatRoom joiningRoom = rooms.get(roomId);
             joiningRoom.addMember(client);
+        }
+    }
+
+    public static synchronized void removeMemberFromRoom(ClientHandler client, String roomId) {
+        if (rooms.containsKey(roomId)) {
+            ChatRoom currentRoom = rooms.get(roomId);
+            currentRoom.removeMember(client);
         }
     }
 
