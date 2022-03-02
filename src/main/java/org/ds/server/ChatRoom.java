@@ -35,7 +35,8 @@ public class ChatRoom {
 
     public void addMember(ClientHandler client) {
         members.put(client.getClientId(), client);
-        JSONObject msg = client.changeRoom(roomId);
+        JSONObject msg = client.getChangeRoomMsg(roomId);
+        client.setJoinedRoomId(roomId);
         broadcast(msg);
     }
 
