@@ -175,6 +175,21 @@ public class ClientHandler extends Thread {
                 sendMessage(getChangeRoomMsg(joinedRoomId));
             }
         }
+        else if (msgType.equals("deleteroom")) {
+            String roomId = (String) request.get("roomid");
+            response.put("type", "deleteroom");
+            response.put("roomid", roomId);
+            if (ownedRoomId.equals(roomId)) {
+                ServerState.moveMembers(roomId, ServerState.getMainHallId());
+                ownedRoomId = null;
+                response.put("approved", "true");
+                sendMessage(response);
+            }
+            else {
+                response.put("approved", "false");
+                sendMessage(response);
+            }
+        }
     }
 
     public void setJoinedRoomId(String roomId) {
