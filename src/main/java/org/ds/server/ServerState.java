@@ -1,8 +1,6 @@
 package org.ds.server;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 public class ServerState {
     private static String mainHallId;
@@ -52,6 +50,18 @@ public class ServerState {
             ChatRoom currentRoom = rooms.get(roomId);
             currentRoom.removeMember(client);
         }
+    }
+
+    public static void moveMembers(String fromRoomId, String toRoomId) {
+        ChatRoom from = rooms.get(fromRoomId);
+        ChatRoom to = rooms.get(toRoomId);
+        ArrayList<ClientHandler> toBeMovedMembers = new ArrayList<>(from.getMembers());
+        for (ClientHandler client : toBeMovedMembers) {
+            from.removeMember(client);
+            from.broadcast(client.getChangeRoomMsg(toRoomId));
+            to.addMember(client);
+        }
+        rooms.remove(fromRoomId);
     }
 
     public static ChatRoom getRoom(String roomId) {

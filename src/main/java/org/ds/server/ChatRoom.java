@@ -2,6 +2,7 @@ package org.ds.server;
 
 import org.json.simple.JSONObject;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -33,14 +34,14 @@ public class ChatRoom {
         return owner.getClientId();
     }
 
-    public void addMember(ClientHandler client) {
+    public synchronized void addMember(ClientHandler client) {
         members.put(client.getClientId(), client);
         JSONObject msg = client.getChangeRoomMsg(roomId);
         client.setJoinedRoomId(roomId);
         broadcast(msg);
     }
 
-    public void removeMember(ClientHandler client) {
+    public synchronized void removeMember(ClientHandler client) {
         members.remove(client.getClientId());
     }
 
@@ -56,6 +57,16 @@ public class ChatRoom {
                 entry.getValue().sendMessage(msg);
             }
         }
+    }
+
+    public void delete() {
+        owner = null;
+        members = null;
+        roomId = null;
+    }
+
+    public Collection<ClientHandler> getMembers() {
+        return members.values();
     }
 
     public Set<String> getMemberIds() {
