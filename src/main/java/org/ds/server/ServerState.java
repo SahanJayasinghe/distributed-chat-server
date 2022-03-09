@@ -1,16 +1,17 @@
 package org.ds.server;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ServerState {
     private static String mainHallId;
     private static HashSet<String> clientIds;
-    private static HashMap<String, ChatRoom> rooms;
+    private static Map<String, ChatRoom> rooms;
 
     public static void init(String _mainHallId) {
         clientIds = new HashSet<>();
         mainHallId = _mainHallId;
-        rooms = new HashMap<>();
+        rooms = new ConcurrentHashMap<>();
         rooms.put(mainHallId, new ChatRoom(mainHallId));
     }
 

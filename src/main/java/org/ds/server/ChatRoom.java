@@ -6,22 +6,23 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ChatRoom {
     private String roomId;
     private ClientHandler owner;
-    private HashMap<String, ClientHandler> members;
+    private Map<String, ClientHandler> members;
 
     public ChatRoom(String roomId) {
         this.roomId = roomId;
         this.owner = null;
-        this.members = new HashMap<>();
+        this.members = new ConcurrentHashMap<>();
     }
 
     public ChatRoom(String roomId, ClientHandler owner) {
         this.roomId = roomId;
         this.owner = owner;
-        this.members = new HashMap<>();
+        this.members = new ConcurrentHashMap<>();
     }
 
     public String getRoomId() {
