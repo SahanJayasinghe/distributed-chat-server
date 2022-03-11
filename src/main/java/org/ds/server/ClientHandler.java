@@ -43,37 +43,14 @@ public class ClientHandler extends Thread {
                 } else {
                     break;
                 }
-//                msgType = (String) obj.get("type");
-//                if ("newidentity".equals(msgType)) {
-//                    JSONObject response = new JSONObject();
-//                    response.put("type", "newidentity");
-//                    response.put("approved", "false");
-//                    out.write((response.toJSONString() + "\n").getBytes(StandardCharsets.UTF_8));
-//                    out.flush();
-//                }
             }
             in.close();
             out.close();
             clientSocket.close();
         } catch (IOException | ParseException e) {
-            e.printStackTrace();
+//            e.printStackTrace();
+            quit();
         }
-    }
-
-    public JSONObject readRequest(JSONObject request) {
-        String msgType = (String) request.get("type");
-        JSONObject response = new JSONObject();
-        if ("newidentity".equals(msgType)) {
-            String clientId = (String) request.get("identity");
-            response.put("type", "newidentity");
-            if (ServerState.isClientIdUnique(clientId)) {
-                response.put("approved", "true");
-                this.clientId = clientId;
-            }
-            else
-                response.put("approved", "false");
-        }
-        return response;
     }
 
     public void handleRequest(JSONObject request) {
@@ -112,33 +89,12 @@ public class ClientHandler extends Thread {
             sendMessage(response);
         }
         else if (msgType.equals("quit")) {
-            ChatRoom currentRoom = ServerState.getRoom(joinedRoomId);
-            currentRoom.removeMember(this);
-            ServerState.removeMemberFromRoom(this, joinedRoomId);
-            ServerState.removeClientId(this.clientId);
-
             response.put("type", "roomchange");
             response.put("roomid", "");
             response.put("identity", clientId);
             response.put("former", joinedRoomId);
             sendMessage(response);
-
-            JSONObject broadcastMsg = new JSONObject();
-            broadcastMsg.put("type", "roomchange");
-            broadcastMsg.put("roomid", "");
-            broadcastMsg.put("identity", clientId);
-            broadcastMsg.put("former", joinedRoomId);
-            currentRoom.broadcast(broadcastMsg);
-
-            if (ownedRoomId != null) { // delete owned room
-                JSONObject delRoomMsg = new JSONObject();
-                delRoomMsg.put("type", "deleteroom");
-                delRoomMsg.put("roomid", ownedRoomId);
-                ServerState.moveMembers(ownedRoomId, ServerState.getMainHallId());
-                ownedRoomId = null;
-                delRoomMsg.put("approved", "true");
-                sendMessage(delRoomMsg);
-            }
+            quit();
         }
         else if (msgType.equals("createroom")) {
             String roomId = (String) request.get("roomid");
@@ -199,6 +155,14 @@ public class ClientHandler extends Thread {
                 sendMessage(response);
             }
         }
+        else if (msgType.equals("message")) {
+            String content = (String) request.get("content");
+            response.put("type", "message");
+            response.put("identity", clientId);
+            response.put("content", content);
+            ChatRoom joined = ServerState.getRoom(joinedRoomId);
+            joined.broadcast(response, clientId);
+        }
     }
 
     public void setJoinedRoomId(String roomId) {
@@ -215,6 +179,32 @@ public class ClientHandler extends Thread {
 //        out.write((response.toJSONString() + "\n").getBytes(StandardCharsets.UTF_8));
 //        out.flush();
         return response;
+    }
+
+    private void quit() {
+        if (clientId != null && !joinedRoomId.equals("")) {
+            ChatRoom currentRoom = ServerState.getRoom(joinedRoomId);
+            currentRoom.removeMember(this);
+//            ServerState.removeMemberFromRoom(this, joinedRoomId);
+            ServerState.removeClientId(this.clientId);
+
+            JSONObject broadcastMsg = new JSONObject();
+            broadcastMsg.put("type", "roomchange");
+            broadcastMsg.put("roomid", "");
+            broadcastMsg.put("identity", clientId);
+            broadcastMsg.put("former", joinedRoomId);
+            currentRoom.broadcast(broadcastMsg);
+        }
+
+        if (ownedRoomId != null) { // delete owned room
+            JSONObject delRoomMsg = new JSONObject();
+            delRoomMsg.put("type", "deleteroom");
+            delRoomMsg.put("roomid", ownedRoomId);
+            ServerState.moveMembers(ownedRoomId, ServerState.getMainHallId());
+            ownedRoomId = null;
+            delRoomMsg.put("approved", "true");
+            sendMessage(delRoomMsg);
+        }
     }
 
     public void sendMessage(JSONObject msg) {
