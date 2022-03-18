@@ -24,7 +24,7 @@ public class ChatServer {
             readConfigFile(args[1].strip());
             serverSocket = new ServerSocket(this.port);
             System.out.println("Server is listening on port " + port);
-            ServerState.init("MainHall-s1");
+            ServerState.init("MainHall-" + serverId);
             while (!serverSocket.isClosed())
                 new ClientHandler(serverSocket.accept()).start();
         }
@@ -36,6 +36,7 @@ public class ChatServer {
 
     private void readConfigFile(String configPath) {
         File configFile = new File(configPath);
+        boolean validServerId = false;
         try {
             Scanner fileReader = new Scanner(configFile);
             while (fileReader.hasNextLine()) {
@@ -48,7 +49,12 @@ public class ChatServer {
                 serverConfig.put(data[0], currentConfig);
                 if (serverId.equals(data[0])) {
                     port = Integer.parseInt(data[2]);
+                    validServerId = true;
                 }
+            }
+            if (!validServerId) {
+                System.out.printf("\nServer ID '%s' not found in config file %s", serverId, configPath);
+                System.exit(0);
             }
         } catch (FileNotFoundException e) {
             e.printStackTrace();

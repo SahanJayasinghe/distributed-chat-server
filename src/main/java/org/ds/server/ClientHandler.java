@@ -5,7 +5,11 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
-import java.io.*;
+//import java.io.*;
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
@@ -100,33 +104,7 @@ public class ClientHandler extends Thread {
             String roomId = (String) request.get("roomid");
             response.put("type", "createroom");
             response.put("roomid", roomId);
-            String regex = "^[a-zA-Z]{1}[a-zA-Z0-9]{2,15}$";
-            boolean isMatched = Pattern.matches(regex, roomId);
-            synchronized (this) {
-                if (isMatched && this.ownedRoomId == null && ServerState.isRoomIdUnique(roomId)) {
-                    response.put("approved", "true");
-                    sendMessage(response);
-                    ChatRoom newChatRoom = new ChatRoom(roomId, this);
-                    this.ownedRoomId = roomId;
-                    ServerState.addRoom(newChatRoom);
-
-                    JSONObject broadcastMsg = new JSONObject();
-                    broadcastMsg.put("type", "roomchange");
-                    broadcastMsg.put("identity", this.clientId);
-                    broadcastMsg.put("former", this.joinedRoomId);
-                    broadcastMsg.put("roomid", this.ownedRoomId);
-                    ChatRoom formerRoom = ServerState.getRoom(this.joinedRoomId);
-                    formerRoom.removeMember(this);
-                    formerRoom.broadcast(broadcastMsg);
-//                    ServerState.addMemberToRoom(this, ownedRoomId);
-                    newChatRoom.addMember(this);
-                    joinedRoomId = ownedRoomId;
-                }
-                else {
-                    response.put("approved", "false");
-                    sendMessage(response);
-                }
-            }
+            createRoom(roomId, response);
         }
         else if (msgType.equals("joinroom")) {
             String roomId = (String) request.get("roomid");
@@ -179,6 +157,35 @@ public class ClientHandler extends Thread {
 //        out.write((response.toJSONString() + "\n").getBytes(StandardCharsets.UTF_8));
 //        out.flush();
         return response;
+    }
+
+    private void createRoom(String roomId, JSONObject response) {
+        String regex = "^[a-zA-Z]{1}[a-zA-Z0-9]{2,15}$";
+        boolean isMatched = Pattern.matches(regex, roomId);
+        synchronized (this) {
+            if (isMatched && this.ownedRoomId == null && ServerState.isRoomIdUnique(roomId)) {
+                response.put("approved", "true");
+                sendMessage(response);
+                ChatRoom newChatRoom = new ChatRoom(roomId, this);
+                this.ownedRoomId = roomId;
+                ServerState.addRoom(newChatRoom);
+
+                JSONObject broadcastMsg = new JSONObject();
+                broadcastMsg.put("type", "roomchange");
+                broadcastMsg.put("identity", this.clientId);
+                broadcastMsg.put("former", this.joinedRoomId);
+                broadcastMsg.put("roomid", this.ownedRoomId);
+                ChatRoom formerRoom = ServerState.getRoom(this.joinedRoomId);
+                formerRoom.removeMember(this);
+                formerRoom.broadcast(broadcastMsg);
+//                    ServerState.addMemberToRoom(this, ownedRoomId);
+                newChatRoom.addMember(this);
+                joinedRoomId = ownedRoomId;
+            } else {
+                response.put("approved", "false");
+                sendMessage(response);
+            }
+        }
     }
 
     private void quit() {

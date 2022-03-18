@@ -1,6 +1,9 @@
 package org.ds.server;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ServerState {
@@ -24,11 +27,20 @@ public class ServerState {
     }
 
     public static synchronized void addClientId(String id) {
-        clientIds.add(id);
+        updateClientIds(id, true);
     }
 
     public static synchronized void removeClientId(String id) {
-        clientIds.remove(id);
+        updateClientIds(id, false);
+    }
+
+    private static synchronized void updateClientIds(String id, boolean add) {
+        if (add) {
+            clientIds.add(id);
+        }
+        else {
+            clientIds.remove(id);
+        }
     }
 
     public static synchronized boolean isRoomIdUnique(String id) {
