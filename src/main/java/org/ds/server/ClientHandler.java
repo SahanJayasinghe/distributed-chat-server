@@ -14,6 +14,7 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
 
+@SuppressWarnings("unchecked")
 public class ClientHandler extends Thread {
     private String clientId = null;
     private String joinedRoomId = "";
@@ -68,7 +69,7 @@ public class ClientHandler extends Thread {
                     response.put("approved", "true");
                     this.clientId = clientId;
                     sendMessage(response);
-                    ServerState.addClientId(this.clientId);
+                    ServerState.addClientId(this.clientId, ServerConnectionManager.getServerId());
                     ServerState.addMemberToRoom(this, ServerState.getMainHallId());
                 } else {
                     response.put("approved", "false");
@@ -164,6 +165,15 @@ public class ClientHandler extends Thread {
         boolean isMatched = Pattern.matches(regex, roomId);
         synchronized (this) {
             if (isMatched && this.ownedRoomId == null && ServerState.isRoomIdUnique(roomId)) {
+                ServerState.addRoomId(roomId, ServerConnectionManager.getServerId());
+                if (ServerConnectionManager.isLeader()) {
+                    JSONObject res = new JSONObject();
+                    res.put("type", "roomidapproval");
+                    res.put("roomid", roomId);
+                    res.put("server", ServerConnectionManager.getServerId());
+                    res.put("approved", "true");
+                    ServerConnectionManager.broadcast(res);
+                }
                 response.put("approved", "true");
                 sendMessage(response);
                 ChatRoom newChatRoom = new ChatRoom(roomId, this);
@@ -193,7 +203,7 @@ public class ClientHandler extends Thread {
             ChatRoom currentRoom = ServerState.getRoom(joinedRoomId);
             currentRoom.removeMember(this);
 //            ServerState.removeMemberFromRoom(this, joinedRoomId);
-            ServerState.removeClientId(this.clientId);
+            ServerState.removeClientId(this.clientId, ServerConnectionManager.getServerId());
 
             JSONObject broadcastMsg = new JSONObject();
             broadcastMsg.put("type", "roomchange");
