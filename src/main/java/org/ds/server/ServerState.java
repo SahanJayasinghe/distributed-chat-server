@@ -1,19 +1,35 @@
 package org.ds.server;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import org.json.simple.JSONObject;
+
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ServerState {
+    private static final String MAINHALL_PREFIX = "MainHall-";
     private static String mainHallId;
-    private static HashSet<String> clientIds;
+    private static ConcurrentHashMap<String, HashSet<String>> clientIds;
+    private static ConcurrentHashMap<String, HashSet<String>> roomIds;
     private static Map<String, ChatRoom> rooms;
+//    private static String serverId;
+    private static boolean isLeader;
 
-    public static void init(String _mainHallId) {
-        clientIds = new HashSet<>();
-        mainHallId = _mainHallId;
+    public static void init() {
+        String serverId = ServerConnectionManager.getServerId();
+        isLeader = ServerConnectionManager.isLeader();
+        mainHallId = MAINHALL_PREFIX + serverId;
+        clientIds = new ConcurrentHashMap<>();
+        clientIds.put(serverId, new HashSet<>());
+        roomIds = new ConcurrentHashMap<>();
+        ServerConnectionManager.getServerIds().forEach(sId -> {
+            if (isLeader) {
+                clientIds.put(sId, new HashSet<>());
+            }
+            HashSet<String> currServerRooms = new HashSet<>();
+            currServerRooms.add(MAINHALL_PREFIX + sId);
+            roomIds.put(sId, currServerRooms);
+        });
+
         rooms = new ConcurrentHashMap<>();
         rooms.put(mainHallId, new ChatRoom(mainHallId));
     }
@@ -22,29 +38,96 @@ public class ServerState {
         return mainHallId;
     }
 
+    @SuppressWarnings("unchecked")
     public static synchronized boolean isClientIdUnique(String id) {
-        return !clientIds.contains(id);
-    }
-
-    public static synchronized void addClientId(String id) {
-        updateClientIds(id, true);
-    }
-
-    public static synchronized void removeClientId(String id) {
-        updateClientIds(id, false);
-    }
-
-    private static synchronized void updateClientIds(String id, boolean add) {
-        if (add) {
-            clientIds.add(id);
+        if (isLeader) {
+            return checkClientIdByLeader(id);
+        }
+        JSONObject msg = new JSONObject();
+        msg.put("type", "newclient");
+        msg.put("id", id);
+        msg.put("server", ServerConnectionManager.getServerId());
+        JSONObject res = ServerConnectionManager.contactLeader(msg);
+        System.out.println("asking leader to check uniqueness of client id");
+        if (res != null) {
+            System.out.println(res.toJSONString());
         }
         else {
-            clientIds.remove(id);
+            System.out.println("null");
+        }
+        return res != null && Boolean.parseBoolean((String) res.get("approved"));
+    }
+
+    private static synchronized boolean checkClientIdByLeader(String id) {
+        boolean isUnique = true;
+        for (Map.Entry<String, HashSet<String>> entry : clientIds.entrySet()) {
+            if (entry.getValue().contains(id)) {
+                isUnique = false;
+                break;
+            }
+        }
+        return isUnique;
+    }
+
+    public static synchronized void addClientId(String id, String sId) {
+        updateClientIds(id, sId, true);
+    }
+
+    public static synchronized void removeClientId(String id, String sId) {
+        updateClientIds(id, sId, false);
+    }
+
+    private static synchronized void updateClientIds(String id, String sId, boolean add) {
+        if (add) {
+            clientIds.get(sId).add(id);
+        }
+        else {
+            clientIds.get(sId).remove(id);
         }
     }
 
     public static synchronized boolean isRoomIdUnique(String id) {
-        return !rooms.containsKey(id);
+        if (isLeader) {
+            return checkRoomIdByLeader(id);
+        }
+        // contact leader to check room id uniqueness
+        JSONObject msg = new JSONObject();
+        msg.put("type", "newroom");
+        msg.put("id", id);
+        msg.put("server", ServerConnectionManager.getServerId());
+        System.out.println("asking leader to check roomid");
+        JSONObject res = ServerConnectionManager.contactLeader(msg);
+        if (res!=null) System.out.println(res.toJSONString());
+        return res != null && Boolean.parseBoolean((String) res.get("approved"));
+//        return !rooms.containsKey(id);
+    }
+
+    private static synchronized boolean checkRoomIdByLeader(String id) {
+        boolean isUnique = true;
+        for (HashSet<String> values : roomIds.values()) {
+            if (values.contains(id)) {
+                isUnique = false;
+                break;
+            }
+        }
+        return isUnique;
+    }
+
+    public static synchronized void addRoomId(String roomId, String sId) {
+        updateRoomIds(roomId, sId, true);
+    }
+
+    public static synchronized void removeRoomId(String roomId, String sId) {
+        updateRoomIds(roomId, sId, false);
+    }
+
+    private static synchronized void updateRoomIds(String roomId, String sId, boolean add) {
+        if (add) {
+            roomIds.get(sId).add(roomId);
+        }
+        else {
+            roomIds.get(sId).remove(roomId);
+        }
     }
 
     public static synchronized void addRoom(ChatRoom room) {
@@ -86,7 +169,12 @@ public class ServerState {
     }
 
     public static Set<String> getRoomList() {
-        return rooms.keySet();
+        Set<String> allRoomIds = new HashSet<>();
+        for (HashSet<String> values : roomIds.values()) {
+            allRoomIds.addAll(values);
+        }
+//        return rooms.keySet();
+        return allRoomIds;
     }
 
     public static String getRoomOwner(String roomId) {

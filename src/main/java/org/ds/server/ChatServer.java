@@ -24,7 +24,10 @@ public class ChatServer {
             readConfigFile(args[1].strip());
             serverSocket = new ServerSocket(this.port);
             System.out.println("Server is listening on port " + port);
-            ServerState.init("MainHall-" + serverId);
+            ServerConnectionManager.init(serverId, serverConfig);
+            new ServerConnectionManager().start();
+            ServerConnectionManager.electLeader();
+            ServerState.init();
             while (!serverSocket.isClosed())
                 new ClientHandler(serverSocket.accept()).start();
         }
