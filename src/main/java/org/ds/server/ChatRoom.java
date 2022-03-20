@@ -11,17 +11,20 @@ public class ChatRoom {
     private String roomId;
     private ClientHandler owner;
     private Map<String, ClientHandler> members;
+    private boolean deleting;
 
     public ChatRoom(String roomId) {
         this.roomId = roomId;
         this.owner = null;
         this.members = new ConcurrentHashMap<>();
+        this.deleting = false;
     }
 
     public ChatRoom(String roomId, ClientHandler owner) {
         this.roomId = roomId;
         this.owner = owner;
         this.members = new ConcurrentHashMap<>();
+        this.deleting = false;
     }
 
     public String getRoomId() {
@@ -35,14 +38,23 @@ public class ChatRoom {
     }
 
     public synchronized void addMember(ClientHandler client) {
-        members.put(client.getClientId(), client);
+        updateMembers(client, true);
         JSONObject msg = client.getChangeRoomMsg(roomId);
         client.setJoinedRoomId(roomId);
         broadcast(msg);
     }
 
     public synchronized void removeMember(ClientHandler client) {
-        members.remove(client.getClientId());
+        updateMembers(client, false);
+    }
+
+    private synchronized void updateMembers(ClientHandler client, boolean add) {
+        if (add) {
+            members.put(client.getClientId(), client);
+        }
+        else {
+            members.remove(client.getClientId());
+        }
     }
 
     public void broadcast(JSONObject msg) {
@@ -71,5 +83,13 @@ public class ChatRoom {
 
     public Set<String> getMemberIds() {
         return members.keySet();
+    }
+
+    public void setDeleting() {
+        deleting = true;
+    }
+
+    public boolean isDeleting() {
+        return deleting;
     }
 }

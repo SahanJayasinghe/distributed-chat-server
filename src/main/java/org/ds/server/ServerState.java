@@ -86,6 +86,11 @@ public class ServerState {
         }
     }
 
+    public static synchronized void switchServer(String clientId, String formerServer, String newServer) {
+        addClientId(clientId, newServer);
+        removeClientId(clientId, formerServer);
+    }
+
     public static synchronized boolean isRoomIdUnique(String id) {
         if (isLeader) {
             return checkRoomIdByLeader(id);
@@ -130,15 +135,28 @@ public class ServerState {
         }
     }
 
+    public static String findServerContainingRoom(String roomId) {
+        String sId = null;
+        for (Map.Entry<String, HashSet<String>> entry : roomIds.entrySet()) {
+            if (entry.getValue().contains(roomId)) {
+                sId = entry.getKey();
+                break;
+            }
+        }
+        return sId;
+    }
+
+    public static synchronized boolean isRoomInThisServer(String roomId) {
+        return rooms.containsKey(roomId);
+    }
+
     public static synchronized void addRoom(ChatRoom room) {
         rooms.put(room.getRoomId(), room);
     }
 
     public static synchronized void addMemberToRoom(ClientHandler client, String roomId) {
-        if (rooms.containsKey(roomId)) {
-            ChatRoom joiningRoom = rooms.get(roomId);
-            joiningRoom.addMember(client);
-        }
+        ChatRoom joiningRoom = rooms.get(roomId);
+        joiningRoom.addMember(client);
     }
 
     public static synchronized void removeMemberFromRoom(ClientHandler client, String roomId) {
@@ -150,6 +168,7 @@ public class ServerState {
 
     public static void moveMembers(String fromRoomId, String toRoomId) {
         ChatRoom from = rooms.get(fromRoomId);
+        from.setDeleting();
         ChatRoom to = rooms.get(toRoomId);
         ArrayList<ClientHandler> toBeMovedMembers = new ArrayList<>(from.getMembers());
         for (ClientHandler client : toBeMovedMembers) {
