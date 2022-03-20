@@ -143,6 +143,10 @@ public class ServerHandler extends Thread {
             Set<String> view = new HashSet<>(Arrays.asList(ids));
             ServerConnectionManager.setReceivedView(view);
         }
+        if (msgType.equals("coordinator")) {
+            String newLeader = (String) request.get("leader");
+            ServerConnectionManager.setLeader(newLeader);
+        }
         alive = false;
     }
 

@@ -97,7 +97,7 @@ public class ServerConnectionManager extends Thread{
             } else {
                 JSONObject coordResponse = new JSONObject();
                 coordResponse.put("type", "coordinator");
-                coordResponse.put("sender", serverId);
+                coordResponse.put("leader", serverId);
                 broadcast(coordResponse);
                 System.out.printf("%s is the new leader\n", serverId);
             }
@@ -181,6 +181,10 @@ public class ServerConnectionManager extends Thread{
 
     public static boolean isLeader() {
         return serverId.equals(leader);
+    }
+
+    public static void setLeader(String newLeader) {
+        leader = newLeader;
     }
 
     public static Set<String> getServerIds() {
