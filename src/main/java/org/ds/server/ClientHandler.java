@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.regex.Pattern;
 
 @SuppressWarnings("unchecked")
@@ -109,16 +110,43 @@ public class ClientHandler extends Thread {
         }
         else if (msgType.equals("joinroom")) {
             String roomId = (String) request.get("roomid");
-            boolean alreadyIn = roomId.equals(joinedRoomId);
-            if (!alreadyIn && this.ownedRoomId == null && !ServerState.isRoomIdUnique(roomId)) {
-                ChatRoom formerRoom = ServerState.getRoom(joinedRoomId);
-                formerRoom.removeMember(this);
-                formerRoom.broadcast(getChangeRoomMsg(roomId));
-                ServerState.addMemberToRoom(this, roomId);
+            joinRoom(roomId);
+        }
+        else if (msgType.equals("movejoin")) {
+            String formerRoom = (String) request.get("former");
+            String joiningRoomId = (String) request.get("roomid");
+            clientId = (String) request.get("identity");
+
+            joinedRoomId = formerRoom;
+            String formerServer = ServerState.findServerContainingRoom(formerRoom);
+            ServerState.addClientId(clientId, ServerConnectionManager.getServerId());
+            JSONObject serverChangeMsg = new JSONObject();
+            serverChangeMsg.put("type", "serverchange");
+            serverChangeMsg.put("approved", "true");
+            serverChangeMsg.put("serverid", ServerConnectionManager.getServerId());
+            sendMessage(serverChangeMsg);
+            if (ServerState.isRoomInThisServer(joiningRoomId)) {
+                if (ServerState.getRoom(joiningRoomId).isDeleting()) {
+                    joiningRoomId = ServerState.getMainHallId();
+                }
+                ServerState.addMemberToRoom(this, joiningRoomId);
             }
-            else {
-                sendMessage(getChangeRoomMsg(joinedRoomId));
-            }
+
+            // inform leader about server change -> switch client id to relevant hashset
+            JSONObject leaderMsg = new JSONObject();
+            leaderMsg.put("type", "serverswitch");
+            leaderMsg.put("clientid", clientId);
+            leaderMsg.put("formerserver", formerServer);
+            leaderMsg.put("newserver", ServerConnectionManager.getServerId());
+            ServerConnectionManager.sendToLeader(leaderMsg);
+
+            // broadcast roomchange message in the room where client previously joined in (previous server)
+            JSONObject msg = new JSONObject();
+            msg.put("type", "roomswitch");
+            msg.put("clientid", clientId);
+            msg.put("formerroom", formerRoom);
+            msg.put("newroom", joinedRoomId);
+            ServerConnectionManager.sendToServer(msg, formerServer);
         }
         else if (msgType.equals("deleteroom")) {
             String roomId = (String) request.get("roomid");
@@ -127,6 +155,9 @@ public class ClientHandler extends Thread {
             if (ownedRoomId != null && ownedRoomId.equals(roomId)) {
                 ServerState.moveMembers(roomId, ServerState.getMainHallId());
                 ownedRoomId = null;
+                JSONObject serverMsg = new JSONObject(response);
+                serverMsg.put("serverid", ServerConnectionManager.getServerId());
+                ServerConnectionManager.broadcast(serverMsg);
                 response.put("approved", "true");
                 sendMessage(response);
             }  else {
@@ -198,6 +229,47 @@ public class ClientHandler extends Thread {
         }
     }
 
+    private void joinRoom(String roomId) {
+        boolean alreadyIn = roomId.equals(joinedRoomId);
+        boolean roomInThisServer = ServerState.isRoomInThisServer(roomId);
+        if (!alreadyIn && this.ownedRoomId == null && roomInThisServer) {
+            if (ServerState.getRoom(roomId).isDeleting()) {
+                sendMessage(getChangeRoomMsg(joinedRoomId));
+            }
+            else {
+                try {
+                    ChatRoom formerRoom = ServerState.getRoom(joinedRoomId);
+                    formerRoom.removeMember(this);
+                    formerRoom.broadcast(getChangeRoomMsg(roomId));
+                    ServerState.addMemberToRoom(this, roomId);
+                } catch (NullPointerException e) {
+                    sendMessage(getChangeRoomMsg(joinedRoomId));
+                }
+            }
+        }
+        else if (!roomInThisServer) {
+            String sId = ServerState.findServerContainingRoom(roomId);
+            if (sId == null) {
+                sendMessage(getChangeRoomMsg(joinedRoomId));
+            }
+            else {
+                HashMap<String, String> config = ServerConnectionManager.getServerConfig(sId);
+                ChatRoom formerRoom = ServerState.getRoom(joinedRoomId);
+                formerRoom.removeMember(this);
+                joinedRoomId = "";
+                JSONObject res = new JSONObject();
+                res.put("type", "route");
+                res.put("roomid", roomId);
+                res.put("host", config.get("address"));
+                res.put("port", config.get("clientsPort"));
+                sendMessage(res);
+            }
+        }
+        else {
+            sendMessage(getChangeRoomMsg(joinedRoomId));
+        }
+    }
+
     private void quit() {
         if (clientId != null && !joinedRoomId.equals("")) {
             ChatRoom currentRoom = ServerState.getRoom(joinedRoomId);
@@ -211,6 +283,14 @@ public class ClientHandler extends Thread {
             broadcastMsg.put("identity", clientId);
             broadcastMsg.put("former", joinedRoomId);
             currentRoom.broadcast(broadcastMsg);
+
+            if (!ServerConnectionManager.isLeader()) {
+                JSONObject clientIdRemoveMsg = new JSONObject();
+                clientIdRemoveMsg.put("type", "deleteclient");
+                clientIdRemoveMsg.put("clientid", clientId);
+                clientIdRemoveMsg.put("serverid", ServerConnectionManager.getServerId());
+                ServerConnectionManager.sendToLeader(clientIdRemoveMsg);
+            }
         }
 
         if (ownedRoomId != null) { // delete owned room
@@ -219,6 +299,11 @@ public class ClientHandler extends Thread {
             delRoomMsg.put("roomid", ownedRoomId);
             ServerState.moveMembers(ownedRoomId, ServerState.getMainHallId());
             ownedRoomId = null;
+            JSONObject roomIdRemoveMsg = new JSONObject();
+            roomIdRemoveMsg.put("type", "deleteroom");
+            roomIdRemoveMsg.put("clientid", clientId);
+            roomIdRemoveMsg.put("serverid", ServerConnectionManager.getServerId());
+            ServerConnectionManager.broadcast(roomIdRemoveMsg);
             delRoomMsg.put("approved", "true");
             sendMessage(delRoomMsg);
         }
