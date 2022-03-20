@@ -10,8 +10,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Set;
+import java.util.*;
 
 public class ServerHandler extends Thread {
     private Socket clientSocket;
@@ -128,6 +127,25 @@ public class ServerHandler extends Thread {
                     (String) request.get("roomid"),
                     (String) request.get("serverid")
             );
+        }
+        if (msgType.equals("IamUp")) {
+            String sender = (String) request.get("sender");
+            String view = ServerConnectionManager.getOnlineServers().toString();
+            JSONObject response = new JSONObject();
+            response.put("type", "view");
+            response.put("serverList", view);
+            ServerConnectionManager.sendToServer(response, sender);
+        }
+        if (msgType.equals("view")) {
+            ServerConnectionManager.setisViewReceived(true);
+            String sList = (String) request.get("serverList");
+            String[] ids = sList.substring(1, sList.length() - 1).split("\\s*,\\s*");
+            Set<String> view = new HashSet<>(Arrays.asList(ids));
+            ServerConnectionManager.setReceivedView(view);
+        }
+        if (msgType.equals("coordinator")) {
+            String newLeader = (String) request.get("leader");
+            ServerConnectionManager.setLeader(newLeader);
         }
         alive = false;
     }

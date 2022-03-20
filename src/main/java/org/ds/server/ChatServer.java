@@ -8,6 +8,7 @@ import java.net.ServerSocket;
 import java.util.HashMap;
 import java.util.Scanner;
 
+
 public class ChatServer {
     private String serverId = null;
     private int port;

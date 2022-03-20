@@ -11,6 +11,8 @@ import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -27,11 +29,18 @@ public class ServerConnectionManager extends Thread{
     private static HashMap<String, HashMap<String, String>> serverConfigMap;
     private static ServerSocket serverSocket;
     private static JSONParser jsonParser;
+    private static boolean isViewReceived = false;
+    private static Set<String> receivedView;
+    private static Set<String> onlineServers;
+
+    //time constants
+    private static final int T2 = 500;
 
     public static void init(String _serverId, HashMap<String, HashMap<String, String>> _serverConfigMap) {
         try {
             serverId = _serverId;
             serverConfigMap = _serverConfigMap;
+            onlineServers = _serverConfigMap.keySet();
             int serverPort = Integer.parseInt(serverConfigMap.get(serverId).get("coordPort"));
             serverSocket = new ServerSocket(serverPort);
             jsonParser = new JSONParser();
@@ -51,7 +60,48 @@ public class ServerConnectionManager extends Thread{
     }
 
     public static void electLeader() {
-        leader = "s1";
+        isViewReceived = false;
+        JSONObject response = new JSONObject();
+        response.put("type", "IamUp");
+        response.put("sender", serverId);
+        broadcast(response);
+        Instant startTime = Instant.now();
+        boolean received = false;
+        while (Duration.between(startTime, Instant.now()).getNano()/1000/1000 < T2) {
+            if (isViewReceived & receivedView!=null) {
+                received = true;
+                break;
+            }
+        }
+        if (!received) {
+            leader = serverId;
+            System.out.printf("%s is the new leader\n", serverId);
+        } else {
+            setisViewReceived(false);
+            Set<String> ids = getOnlineServers();
+            boolean isViewSame = ids.equals(receivedView);
+            if (!isViewSame) {
+                setOnlineServers(receivedView);
+            }
+            Integer myServerNum = Integer.parseInt(serverId.substring(1));
+            Integer max = 0;
+            for (String id: onlineServers) {
+                Integer serverNum = Integer.parseInt(id.substring(1));
+                if (serverNum > max) {
+                    max = serverNum;
+                }
+            }
+            if (max > myServerNum) {
+                leader = "s".concat(max.toString());
+                System.out.printf("%s is the new leader\n", leader);
+            } else {
+                JSONObject coordResponse = new JSONObject();
+                coordResponse.put("type", "coordinator");
+                coordResponse.put("leader", serverId);
+                broadcast(coordResponse);
+                System.out.printf("%s is the new leader\n", serverId);
+            }
+        }
     }
 
     public static JSONObject contactLeader(JSONObject msg) {
@@ -113,12 +163,40 @@ public class ServerConnectionManager extends Thread{
         return serverId;
     }
 
+    public static void setisViewReceived(boolean val) {
+        isViewReceived = val;
+    }
+
+    public static boolean getisViewReceived() {
+        return isViewReceived;
+    }
+
+    public static void setReceivedView(Set<String> view) {
+        receivedView = view;
+    }
+
+    public static Set<String> getReceivedView() {
+        return receivedView;
+    }
+
     public static boolean isLeader() {
         return serverId.equals(leader);
     }
 
+    public static void setLeader(String newLeader) {
+        leader = newLeader;
+    }
+
     public static Set<String> getServerIds() {
         return serverConfigMap.keySet();
+    }
+
+    public static Set<String> getOnlineServers() {
+        return onlineServers;
+    }
+
+    public static void setOnlineServers(Set<String> val) {
+        onlineServers = val;
     }
 
     public static HashMap<String, String> getServerConfig(String sId) {
