@@ -97,7 +97,16 @@ public class ServerHandler extends Thread {
                 ServerState.addRoomId(roomId, sId);
             }
         }
-        alive = false;
+        else if (msgType.equals("IamUp")) {
+            JSONObject response = new JSONObject();
+            response.put("type", "view");
+            sendMessage(response);
+
+        }
+        else if (msgType.equals("view")) {
+            System.out.println("view recieved");
+        }
+            alive = false;
     }
 
     public void sendMessage(JSONObject msg) {

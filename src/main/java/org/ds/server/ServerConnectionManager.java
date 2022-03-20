@@ -28,6 +28,10 @@ public class ServerConnectionManager extends Thread{
     private static ServerSocket serverSocket;
     private static JSONParser jsonParser;
 
+    // need to move
+    private static final int T2 = 500;
+    private static final int T3 = 500;
+
     public static void init(String _serverId, HashMap<String, HashMap<String, String>> _serverConfig) {
         try {
             serverId = _serverId;
@@ -51,7 +55,10 @@ public class ServerConnectionManager extends Thread{
     }
 
     public static void electLeader() {
-        leader = "s1";
+//        leader = "s1";
+        JSONObject iamup = new JSONObject();
+        iamup.put("type", "IamUp");
+        broadcast(iamup);
     }
 
     public static JSONObject contactLeader(JSONObject msg) {
