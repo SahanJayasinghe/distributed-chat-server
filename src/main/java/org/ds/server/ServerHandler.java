@@ -58,38 +58,62 @@ public class ServerHandler extends Thread {
 
     public void handleRequest(JSONObject request) {
         String msgType = (String) request.get("type");
-        if (msgType.equals("newclient")) {
-            String id = (String) request.get("id");
-            synchronized (this) {
-                boolean approved = ServerState.isClientIdUnique(id);
-                if (approved) {
-                    String sId = (String) request.get("server");
-                    ServerState.addClientId(id, sId);
+        if (ServerConnectionManager.isLeader()) {
+            if (msgType.equals("newclient")) {
+                String id = (String) request.get("id");
+                synchronized (this) {
+                    boolean approved = ServerState.isClientIdUnique(id);
+                    if (approved) {
+                        String sId = (String) request.get("server");
+                        ServerState.addClientId(id, sId);
+                    }
+                    JSONObject response = new JSONObject();
+                    response.put("type", msgType);
+                    response.put("approved", String.valueOf(approved));
+                    sendMessage(response);
                 }
+            }
+            else if (msgType.equals("newroom")) {
+                String roomId = (String) request.get("id");
+                synchronized (this) {
+                    boolean approved = ServerState.isRoomIdUnique(roomId);
+                    if (approved) {
+                        String sId = (String) request.get("server");
+                        ServerState.addRoomId(roomId, sId);
+                        JSONObject res = new JSONObject();
+                        res.put("type", "roomidapproval");
+                        res.put("roomid", roomId);
+                        res.put("server", sId);
+                        res.put("approved", "true");
+                        sendMessage(res);
+                        ServerConnectionManager.broadcast(res, sId);
+                    }
+                }
+            }
+            else if (msgType.equals("switchserver")) {
+                ServerState.switchServer(
+                        (String) request.get("clientid"),
+                        (String) request.get("formerserver"),
+                        (String) request.get("newserver")
+                );
+            }
+            else if (msgType.equals("deleteclient")) {
+                ServerState.removeClientId(
+                        (String) request.get("clientid"),
+                        (String) request.get("serverid")
+                );
+            }
+            else if (msgType.equals("IamUp")) {
                 JSONObject response = new JSONObject();
-                response.put("type", msgType);
-                response.put("approved", String.valueOf(approved));
+                response.put("type", "view");
                 sendMessage(response);
+
+            }
+            else if (msgType.equals("view")) {
+                System.out.println("view recieved");
             }
         }
-        else if (msgType.equals("newroom")) {
-            String roomId = (String) request.get("id");
-            synchronized (this) {
-                boolean approved = ServerState.isRoomIdUnique(roomId);
-                if (approved) {
-                    String sId = (String) request.get("server");
-                    ServerState.addRoomId(roomId, sId);
-                    JSONObject res = new JSONObject();
-                    res.put("type", "roomidapproval");
-                    res.put("roomid", roomId);
-                    res.put("server", sId);
-                    res.put("approved", "true");
-                    sendMessage(res);
-                    ServerConnectionManager.broadcast(res, sId);
-                }
-            }
-        }
-        else if (msgType.equals("roomidapproval")) {
+        if (msgType.equals("roomidapproval")) {
             boolean approved = Boolean.parseBoolean((String) request.get("approved"));
             if (approved) {
                 String sId = (String) request.get("server");
@@ -97,16 +121,24 @@ public class ServerHandler extends Thread {
                 ServerState.addRoomId(roomId, sId);
             }
         }
-        else if (msgType.equals("IamUp")) {
-            JSONObject response = new JSONObject();
-            response.put("type", "view");
-            sendMessage(response);
-
+        if (msgType.equals("roomswitch")) {
+            String formerRoomId = (String) request.get("formerroom");
+            String newRoomId = (String) request.get("newroom");
+            JSONObject msg = new JSONObject();
+            msg.put("type", "roomchange");
+            msg.put("identity", (String) request.get("clientid"));
+            msg.put("former", formerRoomId);
+            msg.put("roomid", newRoomId);
+            ChatRoom former = ServerState.getRoom(formerRoomId);
+            former.broadcast(msg);
         }
-        else if (msgType.equals("view")) {
-            System.out.println("view recieved");
+        if (msgType.equals("deleteroom")) {
+            ServerState.removeRoomId(
+                    (String) request.get("roomid"),
+                    (String) request.get("serverid")
+            );
         }
-            alive = false;
+        alive = false;
     }
 
     public void sendMessage(JSONObject msg) {

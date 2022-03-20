@@ -24,19 +24,15 @@ public class ServerConnectionManager extends Thread{
         "s2" : {"address": "123.68.129.4", "clientsPort": 4445, "coordPort": 5556}
      }
      **/
-    private static HashMap<String, HashMap<String, String>> serverConfig;
+    private static HashMap<String, HashMap<String, String>> serverConfigMap;
     private static ServerSocket serverSocket;
     private static JSONParser jsonParser;
 
-    // need to move
-    private static final int T2 = 500;
-    private static final int T3 = 500;
-
-    public static void init(String _serverId, HashMap<String, HashMap<String, String>> _serverConfig) {
+    public static void init(String _serverId, HashMap<String, HashMap<String, String>> _serverConfigMap) {
         try {
             serverId = _serverId;
-            serverConfig = _serverConfig;
-            int serverPort = Integer.parseInt(serverConfig.get(serverId).get("coordPort"));
+            serverConfigMap = _serverConfigMap;
+            int serverPort = Integer.parseInt(serverConfigMap.get(serverId).get("coordPort"));
             serverSocket = new ServerSocket(serverPort);
             jsonParser = new JSONParser();
         } catch (IOException e) {
@@ -55,15 +51,12 @@ public class ServerConnectionManager extends Thread{
     }
 
     public static void electLeader() {
-//        leader = "s1";
-        JSONObject iamup = new JSONObject();
-        iamup.put("type", "IamUp");
-        broadcast(iamup);
+        leader = "s1";
     }
 
     public static JSONObject contactLeader(JSONObject msg) {
         try {
-            HashMap<String, String> leaderConfig = serverConfig.get(leader);
+            HashMap<String, String> leaderConfig = serverConfigMap.get(leader);
             String host = leaderConfig.get("address");
             int port = Integer.parseInt(leaderConfig.get("coordPort"));
             Socket socket = new Socket(host, port);
@@ -84,6 +77,38 @@ public class ServerConnectionManager extends Thread{
         }
     }
 
+    public static void sendToLeader(JSONObject msg) {
+        try {
+            HashMap<String, String> leaderConfig = serverConfigMap.get(leader);
+            String host = leaderConfig.get("address");
+            int port = Integer.parseInt(leaderConfig.get("coordPort"));
+            Socket socket = new Socket(host, port);
+            DataOutputStream out = new DataOutputStream(socket.getOutputStream());
+            out.write((msg.toJSONString() + "\n").getBytes(StandardCharsets.UTF_8));
+            out.flush();
+            out.close();
+            socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void sendToServer(JSONObject msg, String serverId) {
+        try {
+            HashMap<String, String> serverConfig = serverConfigMap.get(serverId);
+            String host = serverConfig.get("address");
+            int port = Integer.parseInt(serverConfig.get("coordPort"));
+            Socket socket = new Socket(host, port);
+            DataOutputStream out = new DataOutputStream(socket.getOutputStream());
+            out.write((msg.toJSONString() + "\n").getBytes(StandardCharsets.UTF_8));
+            out.flush();
+            out.close();
+            socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     public static String getServerId() {
         return serverId;
     }
@@ -93,11 +118,15 @@ public class ServerConnectionManager extends Thread{
     }
 
     public static Set<String> getServerIds() {
-        return serverConfig.keySet();
+        return serverConfigMap.keySet();
+    }
+
+    public static HashMap<String, String> getServerConfig(String sId) {
+        return serverConfigMap.get(sId);
     }
 
     public static void broadcast(JSONObject msg) {
-        for (Map.Entry<String, HashMap<String, String>> entry : serverConfig.entrySet()) {
+        for (Map.Entry<String, HashMap<String, String>> entry : serverConfigMap.entrySet()) {
             String currentServerId = entry.getKey();
             if (!currentServerId.equals(serverId)) {
                 try {
@@ -117,7 +146,7 @@ public class ServerConnectionManager extends Thread{
     }
 
     public static void broadcast(JSONObject msg, String exceptServerId) {
-        for (Map.Entry<String, HashMap<String, String>> entry : serverConfig.entrySet()) {
+        for (Map.Entry<String, HashMap<String, String>> entry : serverConfigMap.entrySet()) {
             String currentServerId = entry.getKey();
             if (!currentServerId.equals(serverId) && !currentServerId.equals(exceptServerId)) {
                 try {
