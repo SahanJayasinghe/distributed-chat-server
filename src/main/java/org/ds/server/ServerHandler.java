@@ -12,6 +12,7 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
+
 public class ServerHandler extends Thread {
     private Socket clientSocket;
     private DataOutputStream out;
@@ -116,7 +117,7 @@ public class ServerHandler extends Thread {
             String newRoomId = (String) request.get("newroom");
             JSONObject msg = new JSONObject();
             msg.put("type", "roomchange");
-            msg.put("identity", (String) request.get("clientid"));
+            msg.put("identity", request.get("clientid"));
             msg.put("former", formerRoomId);
             msg.put("roomid", newRoomId);
             ChatRoom former = ServerState.getRoom(formerRoomId);
@@ -145,7 +146,12 @@ public class ServerHandler extends Thread {
         }
         if (msgType.equals("coordinator")) {
             String newLeader = (String) request.get("leader");
-            ServerConnectionManager.setLeader(newLeader);
+            Integer serverNum = Integer.parseInt(newLeader.substring(1));
+            String serverId = ServerConnectionManager.getServerId();
+            Integer myServer = Integer.parseInt(serverId.substring(1));
+            if (myServer < serverNum) {
+                ServerConnectionManager.setLeader(newLeader);
+            }
         }
         alive = false;
     }
