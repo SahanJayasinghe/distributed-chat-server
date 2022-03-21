@@ -63,6 +63,7 @@ public class ServerHandler extends Thread {
                 String id = (String) request.get("id");
                 synchronized (this) {
                     boolean approved = ServerState.isClientIdUnique(id);
+                    System.out.printf("clientId: %s approved by leader\n", id);
                     if (approved) {
                         String sId = (String) request.get("server");
                         ServerState.addClientId(id, sId);
@@ -149,9 +150,9 @@ public class ServerHandler extends Thread {
         }
         if (msgType.equals("coordinator")) {
             String newLeader = (String) request.get("leader");
-            Integer serverNum = Integer.parseInt(newLeader.substring(1));
+            int serverNum = Integer.parseInt(newLeader.substring(1));
             String serverId = ServerConnectionManager.getServerId();
-            Integer myServer = Integer.parseInt(serverId.substring(1));
+            int myServer = Integer.parseInt(serverId.substring(1));
             if (myServer < serverNum) {
                 ServerConnectionManager.setLeader(newLeader);
             }
