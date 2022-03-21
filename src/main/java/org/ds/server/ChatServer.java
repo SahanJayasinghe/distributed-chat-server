@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.ServerSocket;
-//import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Scanner;
 
@@ -47,6 +46,7 @@ public class ChatServer {
                 String line = fileReader.nextLine();
                 String[] data = line.strip().split("\\t");
                 HashMap<String, String> currentConfig = new HashMap<>();
+//                System.out.println(data[0]);
                 currentConfig.put("address", data[1]);
                 currentConfig.put("clientsPort", data[2]);
                 currentConfig.put("coordPort", data[3]);
