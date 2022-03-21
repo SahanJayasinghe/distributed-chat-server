@@ -17,6 +17,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+
 public class ServerConnectionManager extends Thread{
     private static String serverId = null;
     private static String leader = null;
@@ -33,7 +34,7 @@ public class ServerConnectionManager extends Thread{
     private static Set<String> receivedView;
     private static Set<String> onlineServers;
 
-    //time constants
+    //time constants in ms
     private static final int T2 = 500;
 
     public static void init(String _serverId, HashMap<String, HashMap<String, String>> _serverConfigMap) {
@@ -185,6 +186,7 @@ public class ServerConnectionManager extends Thread{
 
     public static void setLeader(String newLeader) {
         leader = newLeader;
+        System.out.printf("%s is the new leader", leader);
     }
 
     public static Set<String> getServerIds() {
@@ -217,7 +219,8 @@ public class ServerConnectionManager extends Thread{
                     out.flush();
                 }
                 catch (IOException e) {
-                    e.printStackTrace();
+                    System.out.printf("Broadcast message to %s failed\n", currentServerId);
+//                    e.printStackTrace();
                 }
             }
         }
