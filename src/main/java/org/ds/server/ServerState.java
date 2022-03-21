@@ -12,17 +12,15 @@ public class ServerState {
     private static ConcurrentHashMap<String, HashSet<String>> roomIds;
     private static Map<String, ChatRoom> rooms;
 //    private static String serverId;
-    private static boolean isLeader;
 
     public static void init() {
         String serverId = ServerConnectionManager.getServerId();
-        isLeader = ServerConnectionManager.isLeader();
         mainHallId = MAINHALL_PREFIX + serverId;
         clientIds = new ConcurrentHashMap<>();
         clientIds.put(serverId, new HashSet<>());
         roomIds = new ConcurrentHashMap<>();
         ServerConnectionManager.getServerIds().forEach(sId -> {
-            if (isLeader) {
+            if (ServerConnectionManager.isLeader()) {
                 clientIds.put(sId, new HashSet<>());
             }
             HashSet<String> currServerRooms = new HashSet<>();
@@ -40,7 +38,7 @@ public class ServerState {
 
     @SuppressWarnings("unchecked")
     public static synchronized boolean isClientIdUnique(String id) {
-        if (isLeader) {
+        if (ServerConnectionManager.isLeader()) {
             return checkClientIdByLeader(id);
         }
         JSONObject msg = new JSONObject();
@@ -92,7 +90,7 @@ public class ServerState {
     }
 
     public static synchronized boolean isRoomIdUnique(String id) {
-        if (isLeader) {
+        if (ServerConnectionManager.isLeader()) {
             return checkRoomIdByLeader(id);
         }
         // contact leader to check room id uniqueness

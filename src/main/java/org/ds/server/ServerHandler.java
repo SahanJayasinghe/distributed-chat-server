@@ -76,16 +76,19 @@ public class ServerHandler extends Thread {
                 String roomId = (String) request.get("id");
                 synchronized (this) {
                     boolean approved = ServerState.isRoomIdUnique(roomId);
+                    String sId = (String) request.get("server");
+                    JSONObject res = new JSONObject();
+                    res.put("type", "roomidapproval");
+                    res.put("roomid", roomId);
+                    res.put("server", sId);
+                    res.put("approved", String.valueOf(approved));
                     if (approved) {
-                        String sId = (String) request.get("server");
                         ServerState.addRoomId(roomId, sId);
-                        JSONObject res = new JSONObject();
-                        res.put("type", "roomidapproval");
-                        res.put("roomid", roomId);
-                        res.put("server", sId);
-                        res.put("approved", "true");
                         sendMessage(res);
                         ServerConnectionManager.broadcast(res, sId);
+                    }
+                    else {
+                        sendMessage(res);
                     }
                 }
             }

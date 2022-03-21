@@ -121,7 +121,7 @@ public class ServerConnectionManager extends Thread{
             in.close();
             socket.close();
             return res;
-        } catch (IOException | ParseException e) {
+        } catch (IOException | ParseException | NullPointerException e) {
             e.printStackTrace();
             return null;
         }
