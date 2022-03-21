@@ -92,7 +92,7 @@ public class HeartBeatScheduler {
                                 DataOutputStream out = new DataOutputStream(socket.getOutputStream());
                                 JSONObject msg = new JSONObject();
                                 msg.put("type", SERVER_DOWN);
-                                msg.put("server", serverId);
+                                msg.put("server", server_Id);
                                 out.write((msg.toJSONString() + "\n").getBytes(StandardCharsets.UTF_8));
                                 out.flush();
                                 out.close();
