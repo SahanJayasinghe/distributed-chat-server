@@ -153,6 +153,12 @@ public class ServerHandler extends Thread {
             String server_id = (String) request.get("server");
             HeartBeatScheduler.updateHeartbeatReceivedTimes(server_id);
         }
+        if (msgType.equals(HeartBeatScheduler.SERVER_DOWN)) {
+            String server_id = (String) request.get("server");
+            System.out.println("server recieved the failure msg - failed server id : " + server_id);
+            // This server has failed.
+            // TODO :: take actions
+        }
         alive = false;
     }
 
