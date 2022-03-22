@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -49,9 +50,12 @@ public class ServerConnectionManager extends Thread {
         try {
             serverId = _serverId;
             serverConfigMap = _serverConfigMap;
-            onlineServers = _serverConfigMap.keySet();
+            // onlineServers = _serverConfigMap.keySet();
             receivedAnswers = receivedAnswersMap.keySet();
-            T4 = 2000/Integer.parseInt(serverId.substring(1));
+            T4 = 2000 / Integer.parseInt(serverId.substring(1));
+            // onlineServers = _serverConfigMap.keySet();
+            onlineServers = new HashSet<String>();
+            onlineServers.add(serverId);
             int serverPort = Integer.parseInt(serverConfigMap.get(serverId).get("coordPort"));
             serverSocket = new ServerSocket(serverPort);
             jsonParser = new JSONParser();
@@ -80,7 +84,7 @@ public class ServerConnectionManager extends Thread {
         coordMsg.put("type", "coordinator");
         coordMsg.put("leader", serverId);
 
-        for (String server: serverConfigMap.keySet()) {
+        for (String server : serverConfigMap.keySet()) {
             int serverNum = Integer.parseInt(server.substring(1));
             if (serverNum > myServerNum) {
                 JSONObject electionMsg = new JSONObject();
@@ -90,10 +94,10 @@ public class ServerConnectionManager extends Thread {
             }
         }
         Instant sTime = Instant.now();
-        while (Duration.between(sTime, Instant.now()).getNano()/1000/1000 < T2) {
+        while (Duration.between(sTime, Instant.now()).getNano() / 1000 / 1000 < T2) {
             if (!getReceivedAnswers().isEmpty()) {
                 ansReceived = true;
-//                break;
+                // break;
             }
         }
         if (ansReceived) {
@@ -123,6 +127,13 @@ public class ServerConnectionManager extends Thread {
         setLeader(serverId);
     }
 
+    public static void updateOnlineServers() {
+        JSONObject response = new JSONObject();
+        response.put("type", "areYouThere");
+        response.put("sender", serverId);
+        broadcast(response);
+    }
+
     public static void electLeader() {
         isViewReceived = false;
         JSONObject response = new JSONObject();
@@ -145,7 +156,7 @@ public class ServerConnectionManager extends Thread {
             Set<String> ids = getOnlineServers();
             boolean isViewSame = ids.equals(receivedView);
             if (!isViewSame) {
-                setOnlineServers(receivedView);
+                // setOnlineServers(receivedView); //TODO:: Check this
             }
             int myServerNum = Integer.parseInt(serverId.substring(1));
             int max = 0;
@@ -237,7 +248,6 @@ public class ServerConnectionManager extends Thread {
         return isNomReceived;
     }
 
-
     public static void setisCordReceived(boolean val) {
         isCordReceived = val;
     }
@@ -254,19 +264,19 @@ public class ServerConnectionManager extends Thread {
         receivedAnswers.remove(val);
     }
 
-    public  static void clearReceivedAnswers() {
+    public static void clearReceivedAnswers() {
         receivedAnswers.clear();
     }
 
     public static String getMaxReceivedAnswer() {
         int max = 0;
-        for (String server: getReceivedAnswers()) {
+        for (String server : getReceivedAnswers()) {
             int serverNum = Integer.parseInt(server.substring(1));
             if (serverNum > max) {
                 max = serverNum;
             }
         }
-        return("s" + max);
+        return ("s" + max);
     }
 
     public static Set<String> getReceivedAnswers() {
@@ -305,6 +315,7 @@ public class ServerConnectionManager extends Thread {
     public static int getT4() {
         return T4;
     }
+
     public static void broadcast(JSONObject msg) {
         for (Map.Entry<String, HashMap<String, String>> entry : serverConfigMap.entrySet()) {
             String currentServerId = entry.getKey();
@@ -329,7 +340,7 @@ public class ServerConnectionManager extends Thread {
             String currentServerId = entry.getKey();
             if (!currentServerId.equals(serverId) && !currentServerId.equals(exceptServerId)) {
                 try {
-                    System.out.println(currentServerId);
+                    // System.out.println(currentServerId);
                     Socket s = new Socket(
                             entry.getValue().get("address"),
                             Integer.parseInt(entry.getValue().get("coordPort")));
@@ -345,5 +356,17 @@ public class ServerConnectionManager extends Thread {
 
     public static String getLeader() {
         return leader;
+    }
+
+    public static void removeServerFromOnlineServers(String server_id) {
+        System.out.println("removed from online servers - server id : " + server_id);
+        onlineServers.remove(server_id);
+    }
+
+    public static void addServerToOnlineServers(String server_id) {
+        System.out.println("onlineServers : " + onlineServers);
+        onlineServers.add(server_id);
+        System.out.println("added to online servers - server id : " + server_id);
+        System.out.println("onlineServers : " + onlineServers);
     }
 }

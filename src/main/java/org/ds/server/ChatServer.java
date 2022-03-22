@@ -24,6 +24,7 @@ public class ChatServer {
             serverSocket = new ServerSocket(this.port);
             System.out.println("Server is listening on port " + port);
             ServerConnectionManager.init(serverId, serverConfig);
+            ServerConnectionManager.updateOnlineServers();
             new ServerConnectionManager().start();
             ServerConnectionManager.electLeader();
             HeartBeatScheduler heartBeatScheduler = new HeartBeatScheduler(serverConfig, serverId);

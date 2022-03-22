@@ -198,9 +198,32 @@ public class ServerHandler extends Thread {
         }
         if (msgType.equals(HeartBeatScheduler.SERVER_DOWN)) {
             String server_id = (String) request.get("server");
-            System.out.println("server recieved the failure msg - failed server id : " + server_id);
-            // This server has failed.
-            // TODO :: take actions
+            System.out.println("Recieved the failure msg - failed server id : " + server_id);
+            ServerConnectionManager.removeServerFromOnlineServers(server_id);
+            if (ServerConnectionManager.isLeader() || ServerConnectionManager.getLeader().equals(server_id)) {
+                JSONObject response = new JSONObject();
+                response.put("type", HeartBeatScheduler.SERVER_DOWN);
+                response.put("server", server_id);
+                ServerConnectionManager.broadcast(response, server_id);
+            }
+            if (ServerConnectionManager.getLeader().equals(server_id)) {
+                ServerConnectionManager.electLeader();
+                System.out.println("Leader Failed! new election started");
+            }
+        }
+        if (msgType.equals("areYouThere")) {
+            String sender = (String) request.get("sender");
+            System.out.println("Recieved AreYouThere msg from : " + sender);
+            ServerConnectionManager.addServerToOnlineServers(sender);
+            JSONObject response = new JSONObject();
+            response.put("type", "IamHere");
+            response.put("server", ServerConnectionManager.getServerId());
+            ServerConnectionManager.sendToServer(response, sender);
+        }
+        if (msgType.equals("IamHere")) {
+            String sender = (String) request.get("server");
+            System.out.println("Recieved IamHere msg from : " + sender);
+            ServerConnectionManager.addServerToOnlineServers(sender);
         }
         alive = false;
     }

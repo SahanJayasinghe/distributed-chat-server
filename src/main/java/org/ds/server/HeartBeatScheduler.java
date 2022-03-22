@@ -12,6 +12,7 @@ public class HeartBeatScheduler {
     private String serverId = null;
     public static String HEARTBEAT = "HEARTBEAT";
     public static String SERVER_DOWN = "SERVER_DOWN";
+    public static String SERVER_UP = "SERVER_UP";
     HashMap<String, HashMap<String, String>> serverConfig;
 
     public static void updateHeartbeatReceivedTimes(String server_id) {
@@ -42,7 +43,7 @@ public class HeartBeatScheduler {
                 String leader = ServerConnectionManager.getLeader();
                 Set<String> serverIds = heartbeatReceivedTimes.keySet();
                 for (String server_Id : serverIds) {
-                    if (!serverId.equals(server_Id)) {
+                    if (!serverId.equals(server_Id) && ServerConnectionManager.getOnlineServers().contains(server_Id)) {
                         Long lastHeartbeatReceivedTime = (Long) heartbeatReceivedTimes.get(server_Id);
                         Long timeSinceLastHeartbeat = now - lastHeartbeatReceivedTime;
                         if (timeSinceLastHeartbeat >= HEARTBEAT_INTERVEL * 1000000) {
@@ -54,7 +55,7 @@ public class HeartBeatScheduler {
                                 // notify leader
                                 JSONObject msg = new JSONObject();
                                 msg.put("type", SERVER_DOWN);
-                                msg.put("server", serverId);
+                                msg.put("server", server_Id);
                                 ServerConnectionManager.sendToLeader(msg);
                                 System.out.println("Server failure notified to leader");
                             }
@@ -71,6 +72,7 @@ public class HeartBeatScheduler {
             while (true) {
                 // Set<String> serverIds = heartbeatReceivedTimes.keySet();
                 Set<String> serverIds = ServerConnectionManager.getOnlineServers();
+                System.out.println("Leader : " + ServerConnectionManager.getLeader());
                 System.out.println("online servers " + serverIds);
                 for (String server_Id : serverIds) {
                     if (!server_Id.equals(serverId)) {
