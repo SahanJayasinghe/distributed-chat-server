@@ -18,15 +18,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-
-public class ServerConnectionManager extends Thread{
+public class ServerConnectionManager extends Thread {
     private static String serverId = null;
     private static String leader = null;
     /**
-    serverConfig = {
-        "s1" : {"address": "localhost", "clientsPort": 4444, "coordPort": 5555},
-        "s2" : {"address": "123.68.129.4", "clientsPort": 4445, "coordPort": 5556}
-     }
+     * serverConfig = {
+     * "s1" : {"address": "localhost", "clientsPort": 4444, "coordPort": 5555},
+     * "s2" : {"address": "123.68.129.4", "clientsPort": 4445, "coordPort": 5556}
+     * }
      **/
     private static HashMap<String, HashMap<String, String>> serverConfigMap;
     private static ServerSocket serverSocket;
@@ -39,7 +38,7 @@ public class ServerConnectionManager extends Thread{
     private static Set<String> receivedView;
     private static Set<String> onlineServers;
 
-    //time constants in ms
+    // time constants in ms
     private static final int T2 = 500;
     private static final int T3 = 500;
     private static int T4;
@@ -59,7 +58,7 @@ public class ServerConnectionManager extends Thread{
         }
     }
 
-    public void run(){
+    public void run() {
         try {
             while (!serverSocket.isClosed()) {
                 new ServerHandler(serverSocket.accept()).start();
@@ -130,8 +129,8 @@ public class ServerConnectionManager extends Thread{
         broadcast(response);
         Instant startTime = Instant.now();
         boolean received = false;
-        while (Duration.between(startTime, Instant.now()).getNano()/1000/1000 < T2) {
-            if (isViewReceived & receivedView!=null) {
+        while (Duration.between(startTime, Instant.now()).getNano() / 1000 / 1000 < T2) {
+            if (isViewReceived & receivedView != null) {
                 received = true;
                 break;
             }
@@ -148,7 +147,7 @@ public class ServerConnectionManager extends Thread{
             }
             int myServerNum = Integer.parseInt(serverId.substring(1));
             int max = 0;
-            for (String id: onlineServers) {
+            for (String id : onlineServers) {
                 int serverNum = Integer.parseInt(id.substring(1));
                 if (serverNum > max) {
                     max = serverNum;
@@ -176,8 +175,7 @@ public class ServerConnectionManager extends Thread{
             out.write((msg.toJSONString() + "\n").getBytes(StandardCharsets.UTF_8));
             out.flush();
             BufferedReader in = new BufferedReader(
-                    new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8)
-            );
+                    new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
             JSONObject res = (JSONObject) jsonParser.parse(in.readLine());
             out.close();
             in.close();
@@ -319,15 +317,13 @@ public class ServerConnectionManager extends Thread{
                 try {
                     Socket s = new Socket(
                             entry.getValue().get("address"),
-                            Integer.parseInt(entry.getValue().get("coordPort"))
-                    );
+                            Integer.parseInt(entry.getValue().get("coordPort")));
                     DataOutputStream out = new DataOutputStream(s.getOutputStream());
                     out.write((msg.toJSONString() + "\n").getBytes(StandardCharsets.UTF_8));
                     out.flush();
-                }
-                catch (IOException e) {
+                } catch (IOException e) {
                     System.out.printf("Broadcast message to %s failed\n", currentServerId);
-//                    e.printStackTrace();
+                    // e.printStackTrace();
                 }
             }
         }
@@ -341,16 +337,18 @@ public class ServerConnectionManager extends Thread{
                     System.out.println(currentServerId);
                     Socket s = new Socket(
                             entry.getValue().get("address"),
-                            Integer.parseInt(entry.getValue().get("coordPort"))
-                    );
+                            Integer.parseInt(entry.getValue().get("coordPort")));
                     DataOutputStream out = new DataOutputStream(s.getOutputStream());
                     out.write((msg.toJSONString() + "\n").getBytes(StandardCharsets.UTF_8));
                     out.flush();
-                }
-                catch (IOException e) {
+                } catch (IOException e) {
                     e.printStackTrace();
                 }
             }
         }
+    }
+
+    public static String getLeader() {
+        return leader;
     }
 }

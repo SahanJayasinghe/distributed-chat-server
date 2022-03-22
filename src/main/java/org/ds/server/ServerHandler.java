@@ -33,9 +33,9 @@ public class ServerHandler extends Thread {
         try {
             out = new DataOutputStream(clientSocket.getOutputStream());
             in = new BufferedReader(
-                    new InputStreamReader(clientSocket.getInputStream(), StandardCharsets.UTF_8)
-            );
-            System.out.printf("new connection from server running on %s\n", clientSocket.getRemoteSocketAddress().toString());
+                    new InputStreamReader(clientSocket.getInputStream(), StandardCharsets.UTF_8));
+            System.out.printf("new connection from server running on %s\n",
+                    clientSocket.getRemoteSocketAddress().toString());
 
             String inputLine;
             JSONObject req;
@@ -75,8 +75,7 @@ public class ServerHandler extends Thread {
                     response.put("approved", String.valueOf(approved));
                     sendMessage(response);
                 }
-            }
-            else if (msgType.equals("newroom")) {
+            } else if (msgType.equals("newroom")) {
                 String roomId = (String) request.get("id");
                 synchronized (this) {
                     boolean approved = ServerState.isRoomIdUnique(roomId);
@@ -90,24 +89,19 @@ public class ServerHandler extends Thread {
                         ServerState.addRoomId(roomId, sId);
                         sendMessage(res);
                         ServerConnectionManager.broadcast(res, sId);
-                    }
-                    else {
+                    } else {
                         sendMessage(res);
                     }
                 }
-            }
-            else if (msgType.equals("switchserver")) {
+            } else if (msgType.equals("switchserver")) {
                 ServerState.switchServer(
                         (String) request.get("clientid"),
                         (String) request.get("formerserver"),
-                        (String) request.get("newserver")
-                );
-            }
-            else if (msgType.equals("deleteclient")) {
+                        (String) request.get("newserver"));
+            } else if (msgType.equals("deleteclient")) {
                 ServerState.removeClientId(
                         (String) request.get("clientid"),
-                        (String) request.get("serverid")
-                );
+                        (String) request.get("serverid"));
             }
         }
         if (msgType.equals("roomidapproval")) {
@@ -132,8 +126,7 @@ public class ServerHandler extends Thread {
         if (msgType.equals("deleteroom")) {
             ServerState.removeRoomId(
                     (String) request.get("roomid"),
-                    (String) request.get("serverid")
-            );
+                    (String) request.get("serverid"));
         }
         if (msgType.equals("IamUp")) {
             String sender = (String) request.get("sender");
@@ -200,6 +193,17 @@ public class ServerHandler extends Thread {
             ServerConnectionManager.addToReceivedAnswers(sender);
         }
             alive = false;
+        if (msgType.equals(HeartBeatScheduler.HEARTBEAT)) {
+            String server_id = (String) request.get("server");
+            HeartBeatScheduler.updateHeartbeatReceivedTimes(server_id);
+        }
+        if (msgType.equals(HeartBeatScheduler.SERVER_DOWN)) {
+            String server_id = (String) request.get("server");
+            System.out.println("server recieved the failure msg - failed server id : " + server_id);
+            // This server has failed.
+            // TODO :: take actions
+        }
+        alive = false;
     }
 
     public void sendMessage(JSONObject msg) {

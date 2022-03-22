@@ -7,7 +7,6 @@ import java.net.ServerSocket;
 import java.util.HashMap;
 import java.util.Scanner;
 
-
 public class ChatServer {
     private String serverId = null;
     private int port;
@@ -27,11 +26,12 @@ public class ChatServer {
             ServerConnectionManager.init(serverId, serverConfig);
             new ServerConnectionManager().start();
             ServerConnectionManager.electLeader();
+            HeartBeatScheduler heartBeatScheduler = new HeartBeatScheduler(serverConfig, serverId);
+            heartBeatScheduler.start();
             ServerState.init();
             while (!serverSocket.isClosed())
                 new ClientHandler(serverSocket.accept()).start();
-        }
-        catch (IOException ex) {
+        } catch (IOException ex) {
             System.out.println("Error in the server: " + ex.getMessage());
             ex.printStackTrace();
         }
@@ -46,7 +46,7 @@ public class ChatServer {
                 String line = fileReader.nextLine();
                 String[] data = line.strip().split("\\t");
                 HashMap<String, String> currentConfig = new HashMap<>();
-//                System.out.println(data[0]);
+                // System.out.println(data[0]);
                 currentConfig.put("address", data[1]);
                 currentConfig.put("clientsPort", data[2]);
                 currentConfig.put("coordPort", data[3]);
@@ -80,8 +80,8 @@ public class ChatServer {
             System.exit(0);
         }
 
-//        int port = Integer.parseInt(args[0]);
-//        System.out.println(args.length);
+        // int port = Integer.parseInt(args[0]);
+        // System.out.println(args.length);
 
         ChatServer server = new ChatServer();
         server.start(args);
