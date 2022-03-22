@@ -7,6 +7,7 @@ import java.net.ServerSocket;
 import java.util.HashMap;
 import java.util.Scanner;
 
+
 public class ChatServer {
     private String serverId = null;
     private int port;
@@ -25,7 +26,6 @@ public class ChatServer {
             System.out.println("Server is listening on port " + port);
             ServerConnectionManager.init(serverId, serverConfig);
             ServerConnectionManager.updateOnlineServers();
-//            Thread.sleep(1000);
             new ServerConnectionManager().start();
             ServerConnectionManager.electLeader();
             HeartBeatScheduler heartBeatScheduler = new HeartBeatScheduler(serverConfig, serverId);
@@ -84,10 +84,6 @@ public class ChatServer {
             System.out.println("Syntax: java Server <server-id> <\"config-path\">");
             System.exit(0);
         }
-
-        // int port = Integer.parseInt(args[0]);
-        // System.out.println(args.length);
-
         ChatServer server = new ChatServer();
         server.start(args);
     }
