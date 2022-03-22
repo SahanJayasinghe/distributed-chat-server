@@ -2,17 +2,7 @@ package org.ds.server;
 
 import java.util.HashMap;
 import java.util.Set;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.io.InputStreamReader;
-import java.io.BufferedReader;
-import java.nio.charset.StandardCharsets;
-import java.io.DataOutputStream;
-import java.io.IOException;
-
 import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
 
 public class HeartBeatScheduler {
 
@@ -21,13 +11,12 @@ public class HeartBeatScheduler {
     private static Long TIMEOUT = HEARTBEAT_INTERVEL * 3;
     private String serverId = null;
     public static String HEARTBEAT = "HEARTBEAT";
-    public String SERVER_DOWN = "SERVER_DOWN";
+    public static String SERVER_DOWN = "SERVER_DOWN";
     HashMap<String, HashMap<String, String>> serverConfig;
 
     public static void updateHeartbeatReceivedTimes(String server_id) {
         System.out.println("Heartbeat recieved from : " + server_id);
         heartbeatReceivedTimes.put(server_id, System.nanoTime());
-        System.out.println(heartbeatReceivedTimes);
     }
 
     public HeartBeatScheduler(HashMap<String, HashMap<String, String>> _serverConfig, String _serverId) {
@@ -59,10 +48,15 @@ public class HeartBeatScheduler {
                         if (timeSinceLastHeartbeat >= HEARTBEAT_INTERVEL * 1000000) {
                             if (server_Id.equals(leader)) {
                                 System.out.println("leader failed");
-                                // send leader elect msg
+                                ServerConnectionManager.electLeader(); // send leader elect msg
                             } else {
-                                System.out.println("server failed - " + server_Id);
+                                System.out.println("Server failed - " + server_Id);
                                 // notify leader
+                                JSONObject msg = new JSONObject();
+                                msg.put("type", SERVER_DOWN);
+                                msg.put("server", serverId);
+                                ServerConnectionManager.sendToLeader(msg);
+                                System.out.println("Server failure notified to leader");
                             }
                         }
                     }
@@ -80,35 +74,21 @@ public class HeartBeatScheduler {
                 System.out.println("online servers " + serverIds);
                 for (String server_Id : serverIds) {
                     if (!server_Id.equals(serverId)) {
-                        int port = Integer.parseInt(serverConfig.get(server_Id).get("coordPort"));
-                        String address = serverConfig.get(server_Id).get("address");
-                        Socket socket;
-                        try {
-                            socket = new Socket(address, port);
-                            DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-                            JSONObject msg = new JSONObject();
-                            msg.put("type", HEARTBEAT);
-                            msg.put("server", serverId);
-                            out.write((msg.toJSONString() + "\n").getBytes(StandardCharsets.UTF_8));
-                            System.out.println("Heartbeat sent! to :" + server_Id);
-                            out.flush();
-                            out.close();
-                            socket.close();
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-
+                        JSONObject msg = new JSONObject();
+                        msg.put("type", HEARTBEAT);
+                        msg.put("server", serverId);
+                        ServerConnectionManager.sendToServer(msg, server_Id);
+                        System.out.println("Heartbeat sent! to :" + server_Id);
                     }
                 }
-
                 try {
                     Thread.sleep(HEARTBEAT_INTERVEL);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-
             }
         }
+
     }
 
     public void start() {
