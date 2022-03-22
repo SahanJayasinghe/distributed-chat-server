@@ -4,15 +4,16 @@ import java.util.HashMap;
 import java.util.Set;
 import org.json.simple.JSONObject;
 
+
 public class HeartBeatScheduler {
 
     private static HashMap<String, Long> heartbeatReceivedTimes;
     private static Long HEARTBEAT_INTERVEL = 1000L;
     private static Long TIMEOUT = HEARTBEAT_INTERVEL * 3;
-    private String serverId = null;
+    private String serverId;
     public static String HEARTBEAT = "HEARTBEAT";
     public static String SERVER_DOWN = "SERVER_DOWN";
-    public static String SERVER_UP = "SERVER_UP";
+    // public static String SERVER_UP = "SERVER_UP";
     HashMap<String, HashMap<String, String>> serverConfig;
 
     public static void updateHeartbeatReceivedTimes(String server_id) {
@@ -70,6 +71,7 @@ public class HeartBeatScheduler {
             }
         }
     }
+
 
     class HeartBeatSender extends Thread {
         public void run() {

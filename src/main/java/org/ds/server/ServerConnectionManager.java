@@ -50,11 +50,9 @@ public class ServerConnectionManager extends Thread {
         try {
             serverId = _serverId;
             serverConfigMap = _serverConfigMap;
-            // onlineServers = _serverConfigMap.keySet();
             receivedAnswers = receivedAnswersMap.keySet();
             T4 = 2000 / Integer.parseInt(serverId.substring(1));
-            // onlineServers = _serverConfigMap.keySet();
-            onlineServers = new HashSet<String>();
+            onlineServers = new HashSet<>();
             onlineServers.add(serverId);
             receivedView = new HashSet<>();
             int serverPort = Integer.parseInt(serverConfigMap.get(serverId).get("coordPort"));
@@ -185,7 +183,6 @@ public class ServerConnectionManager extends Thread {
             Set<String> ids = getOnlineServers();
             boolean isViewSame = ids.equals(receivedView);
             if (!isViewSame) {
-                // setOnlineServers(receivedView); //TODO:: Check this
                 concatOnlineServers(receivedView);
             }
             int myServerNum = Integer.parseInt(serverId.substring(1));
@@ -247,18 +244,21 @@ public class ServerConnectionManager extends Thread {
     }
 
     public static void sendToServer(JSONObject msg, String serverId) {
-        try {
-            HashMap<String, String> serverConfig = serverConfigMap.get(serverId);
-            String host = serverConfig.get("address");
-            int port = Integer.parseInt(serverConfig.get("coordPort"));
-            Socket socket = new Socket(host, port);
-            DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-            out.write((msg.toJSONString() + "\n").getBytes(StandardCharsets.UTF_8));
-            out.flush();
-            out.close();
-            socket.close();
-        } catch (IOException e) {
-            e.printStackTrace();
+        if (onlineServers.contains(serverId)) {
+            try {
+                HashMap<String, String> serverConfig = serverConfigMap.get(serverId);
+                String host = serverConfig.get("address");
+                int port = Integer.parseInt(serverConfig.get("coordPort"));
+                Socket socket = new Socket(host, port);
+                DataOutputStream out = new DataOutputStream(socket.getOutputStream());
+                out.write((msg.toJSONString() + "\n").getBytes(StandardCharsets.UTF_8));
+                out.flush();
+                out.close();
+                socket.close();
+            } catch (IOException e) {
+                System.out.println("Could not connect to " + serverId);
+                // e.printStackTrace();
+            }
         }
     }
 
@@ -370,16 +370,18 @@ public class ServerConnectionManager extends Thread {
         for (Map.Entry<String, HashMap<String, String>> entry : serverConfigMap.entrySet()) {
             String currentServerId = entry.getKey();
             if (!currentServerId.equals(serverId)) {
-                try {
-                    Socket s = new Socket(
-                            entry.getValue().get("address"),
-                            Integer.parseInt(entry.getValue().get("coordPort")));
-                    DataOutputStream out = new DataOutputStream(s.getOutputStream());
-                    out.write((msg.toJSONString() + "\n").getBytes(StandardCharsets.UTF_8));
-                    out.flush();
-                } catch (IOException e) {
-                    System.out.printf("Broadcast message to %s failed\n", currentServerId);
-                    // e.printStackTrace();
+                if (onlineServers.contains(currentServerId)) {
+                    try {
+                        Socket s = new Socket(
+                                entry.getValue().get("address"),
+                                Integer.parseInt(entry.getValue().get("coordPort")));
+                        DataOutputStream out = new DataOutputStream(s.getOutputStream());
+                        out.write((msg.toJSONString() + "\n").getBytes(StandardCharsets.UTF_8));
+                        out.flush();
+                    } catch (IOException e) {
+                        System.out.printf("Broadcast message to %s failed\n", currentServerId);
+                        // e.printStackTrace();
+                    }
                 }
             }
         }
@@ -389,16 +391,17 @@ public class ServerConnectionManager extends Thread {
         for (Map.Entry<String, HashMap<String, String>> entry : serverConfigMap.entrySet()) {
             String currentServerId = entry.getKey();
             if (!currentServerId.equals(serverId) && !currentServerId.equals(exceptServerId)) {
-                try {
-                    // System.out.println(currentServerId);
-                    Socket s = new Socket(
-                            entry.getValue().get("address"),
-                            Integer.parseInt(entry.getValue().get("coordPort")));
-                    DataOutputStream out = new DataOutputStream(s.getOutputStream());
-                    out.write((msg.toJSONString() + "\n").getBytes(StandardCharsets.UTF_8));
-                    out.flush();
-                } catch (IOException e) {
-                    e.printStackTrace();
+                if (onlineServers.contains(currentServerId)) {
+                    try {
+                        Socket s = new Socket(
+                                entry.getValue().get("address"),
+                                Integer.parseInt(entry.getValue().get("coordPort")));
+                        DataOutputStream out = new DataOutputStream(s.getOutputStream());
+                        out.write((msg.toJSONString() + "\n").getBytes(StandardCharsets.UTF_8));
+                        out.flush();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         }
