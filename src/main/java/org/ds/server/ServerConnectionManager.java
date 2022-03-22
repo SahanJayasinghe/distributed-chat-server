@@ -84,23 +84,25 @@ public class ServerConnectionManager extends Thread{
             if (!isViewSame) {
                 setOnlineServers(receivedView);
             }
-            Integer myServerNum = Integer.parseInt(serverId.substring(1));
-            Integer max = 0;
+            int myServerNum = Integer.parseInt(serverId.substring(1));
+            int max = 0;
             for (String id: onlineServers) {
-                Integer serverNum = Integer.parseInt(id.substring(1));
+                int serverNum = Integer.parseInt(id.substring(1));
                 if (serverNum > max) {
                     max = serverNum;
                 }
             }
             if (max > myServerNum) {
-                leader = "s".concat(max.toString());
-                System.out.printf("%s is the new leader\n", leader);
+                setLeader("s" + max);
+//                leader = "s".concat(max.toString());
+//                System.out.printf("%s is the new leader\n", leader);
             } else {
                 JSONObject coordResponse = new JSONObject();
                 coordResponse.put("type", "coordinator");
                 coordResponse.put("leader", serverId);
                 broadcast(coordResponse);
-                System.out.printf("%s is the new leader\n", serverId);
+                setLeader(serverId);
+//                System.out.printf("%s is the new leader\n", serverId);
             }
         }
     }
@@ -122,7 +124,7 @@ public class ServerConnectionManager extends Thread{
             in.close();
             socket.close();
             return res;
-        } catch (IOException | ParseException e) {
+        } catch (IOException | ParseException | NullPointerException e) {
             e.printStackTrace();
             return null;
         }
@@ -186,7 +188,7 @@ public class ServerConnectionManager extends Thread{
 
     public static void setLeader(String newLeader) {
         leader = newLeader;
-        System.out.printf("%s is the new leader", leader);
+        System.out.printf("%s is the new leader\n", leader);
     }
 
     public static Set<String> getServerIds() {

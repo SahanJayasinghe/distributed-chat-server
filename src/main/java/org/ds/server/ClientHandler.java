@@ -155,6 +155,8 @@ public class ClientHandler extends Thread {
             if (ownedRoomId != null && ownedRoomId.equals(roomId)) {
                 ServerState.moveMembers(roomId, ServerState.getMainHallId());
                 ownedRoomId = null;
+                ServerState.removeRoomId(roomId, ServerConnectionManager.getServerId());
+
                 JSONObject serverMsg = new JSONObject(response);
                 serverMsg.put("serverid", ServerConnectionManager.getServerId());
                 ServerConnectionManager.broadcast(serverMsg);
@@ -298,7 +300,9 @@ public class ClientHandler extends Thread {
             delRoomMsg.put("type", "deleteroom");
             delRoomMsg.put("roomid", ownedRoomId);
             ServerState.moveMembers(ownedRoomId, ServerState.getMainHallId());
+            ServerState.removeRoomId(ownedRoomId, ServerConnectionManager.getServerId());
             ownedRoomId = null;
+
             JSONObject roomIdRemoveMsg = new JSONObject();
             roomIdRemoveMsg.put("type", "deleteroom");
             roomIdRemoveMsg.put("clientid", clientId);
