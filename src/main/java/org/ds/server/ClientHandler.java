@@ -55,6 +55,7 @@ public class ClientHandler extends Thread {
             clientSocket.close();
         } catch (IOException | ParseException e) {
 //            e.printStackTrace();
+            System.out.println("Abrupt disconnection of client: " + clientId);
             quit();
         }
     }

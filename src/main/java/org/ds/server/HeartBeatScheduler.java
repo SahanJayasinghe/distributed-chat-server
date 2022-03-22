@@ -49,7 +49,7 @@ public class HeartBeatScheduler {
                         if (timeSinceLastHeartbeat >= HEARTBEAT_INTERVEL * 1000000) {
                             if (server_Id.equals(leader)) {
                                 System.out.println("leader failed");
-                                ServerConnectionManager.electLeader(); // send leader elect msg
+                                ServerConnectionManager.electLeaderFailure(); // send leader elect msg
                             } else {
                                 System.out.println("Server failed - " + server_Id);
                                 // notify leader

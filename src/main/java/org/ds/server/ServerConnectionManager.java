@@ -56,7 +56,9 @@ public class ServerConnectionManager extends Thread {
             // onlineServers = _serverConfigMap.keySet();
             onlineServers = new HashSet<String>();
             onlineServers.add(serverId);
+            receivedView = new HashSet<>();
             int serverPort = Integer.parseInt(serverConfigMap.get(serverId).get("coordPort"));
+            System.out.println(serverPort);
             serverSocket = new ServerSocket(serverPort);
             jsonParser = new JSONParser();
         } catch (IOException e) {
@@ -131,7 +133,34 @@ public class ServerConnectionManager extends Thread {
         JSONObject response = new JSONObject();
         response.put("type", "areYouThere");
         response.put("sender", serverId);
-        broadcast(response);
+//        broadcast(response);
+        for (Map.Entry<String, HashMap<String, String>> entry : serverConfigMap.entrySet()) {
+            String currentServerId = entry.getKey();
+            if (!currentServerId.equals(serverId)) {
+                try {
+                    Socket s = new Socket(
+                            entry.getValue().get("address"),
+                            Integer.parseInt(entry.getValue().get("coordPort")));
+                    DataOutputStream out = new DataOutputStream(s.getOutputStream());
+                    out.write((response.toJSONString() + "\n").getBytes(StandardCharsets.UTF_8));
+                    out.flush();
+                    BufferedReader in = new BufferedReader(
+                            new InputStreamReader(s.getInputStream(), StandardCharsets.UTF_8));
+                    JSONObject res = (JSONObject) jsonParser.parse(in.readLine());
+                    System.out.println("Response for areYouThere: " + res.toJSONString());
+                    // res: {"server": "id"}
+                    addServerToOnlineServers((String) res.get("server"));
+                    out.close();
+                    in.close();
+                    s.close();
+                } catch (IOException e) {
+                    System.out.printf("AreYouThere message to %s failed\n", currentServerId);
+                    // e.printStackTrace();
+                } catch (ParseException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
     public static void electLeader() {
@@ -143,9 +172,9 @@ public class ServerConnectionManager extends Thread {
         Instant startTime = Instant.now();
         boolean received = false;
         while (Duration.between(startTime, Instant.now()).getNano() / 1000 / 1000 < T2) {
-            if (isViewReceived & receivedView != null) {
+            if (isViewReceived && !receivedView.isEmpty()) {
                 received = true;
-                break;
+//                break;
             }
         }
         if (!received) {
@@ -157,6 +186,7 @@ public class ServerConnectionManager extends Thread {
             boolean isViewSame = ids.equals(receivedView);
             if (!isViewSame) {
                 // setOnlineServers(receivedView); //TODO:: Check this
+                concatOnlineServers(receivedView);
             }
             int myServerNum = Integer.parseInt(serverId.substring(1));
             int max = 0;
@@ -283,8 +313,28 @@ public class ServerConnectionManager extends Thread {
         return receivedAnswers;
     }
 
+    public static Set<String> getReceivedView() {
+        return receivedView;
+    }
+
     public static void setReceivedView(Set<String> view) {
         receivedView = view;
+    }
+
+    public static void concatReceivedView(Set<String> view) {
+        if (view != null) {
+            if (receivedView == null) {
+                receivedView = new HashSet<>();
+            }
+            receivedView.addAll(view);
+        }
+    }
+
+    public static void addServerToReceivedView(String s) {
+        if (receivedView == null) {
+            receivedView = new HashSet<>();
+        }
+        receivedView.add(s);
     }
 
     public static boolean isLeader() {
@@ -368,5 +418,10 @@ public class ServerConnectionManager extends Thread {
         onlineServers.add(server_id);
         System.out.println("added to online servers - server id : " + server_id);
         System.out.println("onlineServers : " + onlineServers);
+    }
+
+    public static void concatOnlineServers(Set<String> servers) {
+        if (servers != null)
+            onlineServers.addAll(servers);
     }
 }

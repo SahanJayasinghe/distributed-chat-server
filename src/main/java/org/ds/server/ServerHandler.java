@@ -130,6 +130,8 @@ public class ServerHandler extends Thread {
         }
         if (msgType.equals("IamUp")) {
             String sender = (String) request.get("sender");
+            ServerConnectionManager.addServerToReceivedView(sender);
+            ServerConnectionManager.addServerToOnlineServers(sender);
             String view = ServerConnectionManager.getOnlineServers().toString();
             JSONObject response = new JSONObject();
             response.put("type", "view");
@@ -141,7 +143,9 @@ public class ServerHandler extends Thread {
             String sList = (String) request.get("serverList");
             String[] ids = sList.substring(1, sList.length() - 1).split("\\s*,\\s*");
             Set<String> view = new HashSet<>(Arrays.asList(ids));
-            ServerConnectionManager.setReceivedView(view);
+//            ServerConnectionManager.setReceivedView(view);
+            ServerConnectionManager.concatReceivedView(view);
+            ServerConnectionManager.concatOnlineServers(view);
         }
         if (msgType.equals("coordinator")) {
             String newLeader = (String) request.get("leader");
@@ -207,7 +211,7 @@ public class ServerHandler extends Thread {
                 ServerConnectionManager.broadcast(response, server_id);
             }
             if (ServerConnectionManager.getLeader().equals(server_id)) {
-                ServerConnectionManager.electLeader();
+                ServerConnectionManager.electLeaderFailure();
                 System.out.println("Leader Failed! new election started");
             }
         }
@@ -216,9 +220,10 @@ public class ServerHandler extends Thread {
             System.out.println("Recieved AreYouThere msg from : " + sender);
             ServerConnectionManager.addServerToOnlineServers(sender);
             JSONObject response = new JSONObject();
-            response.put("type", "IamHere");
+//            response.put("type", "IamHere");
             response.put("server", ServerConnectionManager.getServerId());
-            ServerConnectionManager.sendToServer(response, sender);
+            sendMessage(response);
+//            ServerConnectionManager.sendToServer(response, sender);
         }
         if (msgType.equals("IamHere")) {
             String sender = (String) request.get("server");

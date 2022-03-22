@@ -25,6 +25,7 @@ public class ChatServer {
             System.out.println("Server is listening on port " + port);
             ServerConnectionManager.init(serverId, serverConfig);
             ServerConnectionManager.updateOnlineServers();
+//            Thread.sleep(1000);
             new ServerConnectionManager().start();
             ServerConnectionManager.electLeader();
             HeartBeatScheduler heartBeatScheduler = new HeartBeatScheduler(serverConfig, serverId);
@@ -36,6 +37,9 @@ public class ChatServer {
             System.out.println("Error in the server: " + ex.getMessage());
             ex.printStackTrace();
         }
+//        catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
     }
 
     private void readConfigFile(String configPath) {
