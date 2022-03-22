@@ -18,6 +18,10 @@ public class HeartBeatScheduler {
     public static void updateHeartbeatReceivedTimes(String server_id) {
         System.out.println("Heartbeat recieved from : " + server_id);
         heartbeatReceivedTimes.put(server_id, System.nanoTime());
+        if(!ServerConnectionManager.getOnlineServers().contains(server_id)){
+            ServerConnectionManager.addServerToOnlineServers(server_id);
+        }
+
     }
 
     public HeartBeatScheduler(HashMap<String, HashMap<String, String>> _serverConfig, String _serverId) {

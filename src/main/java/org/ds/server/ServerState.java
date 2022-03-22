@@ -124,6 +124,11 @@ public class ServerState {
         updateRoomIds(roomId, sId, false);
     }
 
+    public static synchronized void removeServerRooms(String serverId){
+        roomIds.get(serverId);
+    }
+
+
     private static synchronized void updateRoomIds(String roomId, String sId, boolean add) {
         if (add) {
             roomIds.get(sId).add(roomId);

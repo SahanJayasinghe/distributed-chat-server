@@ -21,6 +21,7 @@ public class ServerHandler extends Thread {
     private BufferedReader in;
     private JSONParser jsonParser;
     private boolean alive;
+    public static String DELETE_SERVER_ROOMS = "DELETE_SERVER_ROOMS";
 
     public ServerHandler(Socket s) {
         clientSocket = s;
@@ -128,6 +129,9 @@ public class ServerHandler extends Thread {
                     (String) request.get("roomid"),
                     (String) request.get("serverid"));
         }
+        if(msgType.equals(DELETE_SERVER_ROOMS)){
+            ServerState.removeServerRooms((String) request.get("serverId"));
+        }
         if (msgType.equals("IamUp")) {
             String sender = (String) request.get("sender");
             ServerConnectionManager.addServerToReceivedView(sender);
@@ -203,6 +207,10 @@ public class ServerHandler extends Thread {
         if (msgType.equals(HeartBeatScheduler.SERVER_DOWN)) {
             String server_id = (String) request.get("server");
             System.out.println("Recieved the failure msg - failed server id : " + server_id);
+            JSONObject deleteRoomsResponse = new JSONObject();
+            deleteRoomsResponse.put("type", DELETE_SERVER_ROOMS);
+            deleteRoomsResponse.put("serverId", server_id);
+            ServerConnectionManager.broadcast(deleteRoomsResponse, server_id);
             ServerConnectionManager.removeServerFromOnlineServers(server_id);
             if (ServerConnectionManager.isLeader() || ServerConnectionManager.getLeader().equals(server_id)) {
                 JSONObject response = new JSONObject();
