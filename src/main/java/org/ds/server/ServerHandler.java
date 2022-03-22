@@ -22,6 +22,8 @@ public class ServerHandler extends Thread {
     private JSONParser jsonParser;
     private boolean alive;
     public static String DELETE_SERVER_ROOMS = "DELETE_SERVER_ROOMS";
+    private static final Object newIdentityLock = new Object();
+    private static final Object newRoomLock = new Object();
 
     public ServerHandler(Socket s) {
         clientSocket = s;
@@ -64,7 +66,7 @@ public class ServerHandler extends Thread {
         if (ServerConnectionManager.isLeader()) {
             if (msgType.equals("newclient")) {
                 String id = (String) request.get("id");
-                synchronized (this) {
+                synchronized (newIdentityLock) {
                     boolean approved = ServerState.isClientIdUnique(id);
                     System.out.printf("clientId: %s approved by leader\n", id);
                     if (approved) {
@@ -78,7 +80,7 @@ public class ServerHandler extends Thread {
                 }
             } else if (msgType.equals("newroom")) {
                 String roomId = (String) request.get("id");
-                synchronized (this) {
+                synchronized (newRoomLock) {
                     boolean approved = ServerState.isRoomIdUnique(roomId);
                     String sId = (String) request.get("server");
                     JSONObject res = new JSONObject();

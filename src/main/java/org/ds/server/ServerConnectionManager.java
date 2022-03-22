@@ -18,6 +18,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Semaphore;
 
 public class ServerConnectionManager extends Thread {
     private static String serverId = null;
@@ -40,6 +41,8 @@ public class ServerConnectionManager extends Thread {
     private static Set<String> receivedAnswers;
     private static Set<String> receivedView;
     private static Set<String> onlineServers;
+    private static boolean isElectionRunning = false;
+    public static Semaphore s = new Semaphore(1);
 
     // time constants in ms
     private static final int T2 = 500;
@@ -75,6 +78,7 @@ public class ServerConnectionManager extends Thread {
     }
 
     public static void electLeaderFailure() {
+        setIsElectionRunning(true);
         int myServerNum = Integer.parseInt(getServerId().substring(1));
         boolean ansReceived = false;
         clearReceivedAnswers();
@@ -162,6 +166,7 @@ public class ServerConnectionManager extends Thread {
     }
 
     public static void electLeader() {
+        setIsElectionRunning(true);
         isViewReceived = false;
         JSONObject response = new JSONObject();
         response.put("type", "IamUp");
@@ -176,8 +181,8 @@ public class ServerConnectionManager extends Thread {
             }
         }
         if (!received) {
-            leader = serverId;
-            System.out.printf("%s is the new leader\n", serverId);
+            setLeader(serverId);
+
         } else {
             setisViewReceived(false);
             Set<String> ids = getOnlineServers();
@@ -297,6 +302,14 @@ public class ServerConnectionManager extends Thread {
     public static void clearReceivedAnswers() {
         receivedAnswers.clear();
     }
+    public static boolean getIsElectionRunning(){
+        return isElectionRunning;
+    }
+    public static void setIsElectionRunning(boolean _isElectionRunning){
+        isElectionRunning = _isElectionRunning;
+//        CustomLock.customNotifyAll();
+    }
+
 
     public static String getMaxReceivedAnswer() {
         int max = 0;
@@ -343,7 +356,14 @@ public class ServerConnectionManager extends Thread {
 
     public static void setLeader(String newLeader) {
         leader = newLeader;
-        System.out.printf("%s is the new leader\n", leader);
+        System.out.printf("%s is the new leader line: 359\n", leader);
+
+//        try {
+//            Thread.sleep(10000);
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
+        setIsElectionRunning(false);
     }
 
     public static Set<String> getServerIds() {
@@ -428,3 +448,5 @@ public class ServerConnectionManager extends Thread {
             onlineServers.addAll(servers);
     }
 }
+
+

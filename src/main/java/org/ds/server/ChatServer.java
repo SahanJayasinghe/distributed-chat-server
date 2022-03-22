@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.HashMap;
 import java.util.Scanner;
+import java.util.concurrent.Semaphore;
 
 
 public class ChatServer {
@@ -26,13 +27,26 @@ public class ChatServer {
             System.out.println("Server is listening on port " + port);
             ServerConnectionManager.init(serverId, serverConfig);
             ServerConnectionManager.updateOnlineServers();
+            HeartBeatScheduler heartBeatScheduler = new HeartBeatScheduler(serverConfig, serverId);
             new ServerConnectionManager().start();
             ServerConnectionManager.electLeader();
-            HeartBeatScheduler heartBeatScheduler = new HeartBeatScheduler(serverConfig, serverId);
+
             heartBeatScheduler.start();
             ServerState.init();
-            while (!serverSocket.isClosed())
+            while (!serverSocket.isClosed()){
+//                if(ServerConnectionManager.getIsElectionRunning()){
+//                    CustomLock.customWait();
+//                }
+                while(ServerConnectionManager.getIsElectionRunning()){
+//                    System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>loopserver");
+//                    System.out.println(ServerConnectionManager.getIsElectionRunning());
+
+                }
+                System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>endloopserver");
+
                 new ClientHandler(serverSocket.accept()).start();
+            }
+
         } catch (IOException ex) {
             System.out.println("Error in the server: " + ex.getMessage());
             ex.printStackTrace();
