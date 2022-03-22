@@ -30,6 +30,8 @@ public class ServerConnectionManager extends Thread {
     private static HashMap<String, HashMap<String, String>> serverConfigMap;
     private static ServerSocket serverSocket;
     private static JSONParser jsonParser;
+
+    // fast bully
     private static boolean isViewReceived = false;
     private static boolean isCordReceived = false;
     private static boolean isNomReceived = false;
@@ -227,9 +229,6 @@ public class ServerConnectionManager extends Thread {
         isViewReceived = val;
     }
 
-    public static boolean getisViewReceived() {
-        return isViewReceived;
-    }
     public static void setisNomReceived(boolean val) {
         isNomReceived = val;
     }
@@ -276,10 +275,6 @@ public class ServerConnectionManager extends Thread {
 
     public static void setReceivedView(Set<String> view) {
         receivedView = view;
-    }
-
-    public static Set<String> getReceivedView() {
-        return receivedView;
     }
 
     public static boolean isLeader() {

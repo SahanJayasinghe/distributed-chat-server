@@ -192,7 +192,6 @@ public class ServerHandler extends Thread {
             String sender = (String) request.get("sender");
             ServerConnectionManager.addToReceivedAnswers(sender);
         }
-            alive = false;
         if (msgType.equals(HeartBeatScheduler.HEARTBEAT)) {
             String server_id = (String) request.get("server");
             HeartBeatScheduler.updateHeartbeatReceivedTimes(server_id);
