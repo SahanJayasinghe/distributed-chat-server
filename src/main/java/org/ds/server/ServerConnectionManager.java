@@ -16,6 +16,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ServerConnectionManager extends Thread {
     private static String serverId = null;
@@ -29,18 +30,28 @@ public class ServerConnectionManager extends Thread {
     private static HashMap<String, HashMap<String, String>> serverConfigMap;
     private static ServerSocket serverSocket;
     private static JSONParser jsonParser;
+
+    // fast bully
     private static boolean isViewReceived = false;
+    private static boolean isCordReceived = false;
+    private static boolean isNomReceived = false;
+    private static ConcurrentHashMap receivedAnswersMap = new ConcurrentHashMap<>();
+    private static Set<String> receivedAnswers;
     private static Set<String> receivedView;
     private static Set<String> onlineServers;
 
     // time constants in ms
     private static final int T2 = 500;
+    private static final int T3 = 500;
+    private static int T4;
 
     public static void init(String _serverId, HashMap<String, HashMap<String, String>> _serverConfigMap) {
         try {
             serverId = _serverId;
             serverConfigMap = _serverConfigMap;
             onlineServers = _serverConfigMap.keySet();
+            receivedAnswers = receivedAnswersMap.keySet();
+            T4 = 2000/Integer.parseInt(serverId.substring(1));
             int serverPort = Integer.parseInt(serverConfigMap.get(serverId).get("coordPort"));
             serverSocket = new ServerSocket(serverPort);
             jsonParser = new JSONParser();
@@ -57,6 +68,59 @@ public class ServerConnectionManager extends Thread {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public static void electLeaderFailure() {
+        int myServerNum = Integer.parseInt(getServerId().substring(1));
+        boolean ansReceived = false;
+        clearReceivedAnswers();
+
+        // coordination message
+        JSONObject coordMsg = new JSONObject();
+        coordMsg.put("type", "coordinator");
+        coordMsg.put("leader", serverId);
+
+        for (String server: serverConfigMap.keySet()) {
+            int serverNum = Integer.parseInt(server.substring(1));
+            if (serverNum > myServerNum) {
+                JSONObject electionMsg = new JSONObject();
+                electionMsg.put("type", "election");
+                electionMsg.put("sender", getServerId());
+                sendToServer(electionMsg, server);
+            }
+        }
+        Instant sTime = Instant.now();
+        while (Duration.between(sTime, Instant.now()).getNano()/1000/1000 < T2) {
+            if (!getReceivedAnswers().isEmpty()) {
+                ansReceived = true;
+//                break;
+            }
+        }
+        if (ansReceived) {
+            while (!getReceivedAnswers().isEmpty()) {
+                String maxAnsweredServer = getMaxReceivedAnswer();
+                removeFromReceivedAnswers(maxAnsweredServer);
+                boolean cordReceived = false;
+                setisCordReceived(false);
+                JSONObject nomResponse = new JSONObject();
+                nomResponse.put("type", "nomination");
+                nomResponse.put("sender", getServerId());
+                sendToServer(nomResponse, maxAnsweredServer);
+                Instant startTime = Instant.now();
+                while (Duration.between(startTime, Instant.now()).getNano() / 1000 / 1000 < T3) {
+                    if (getisCordReceived()) {
+                        cordReceived = true;
+                        setisCordReceived(false);
+                        break;
+                    }
+                }
+                if (cordReceived) {
+                    return;
+                }
+            }
+        }
+        broadcast(coordMsg);
+        setLeader(serverId);
     }
 
     public static void electLeader() {
@@ -93,15 +157,12 @@ public class ServerConnectionManager extends Thread {
             }
             if (max > myServerNum) {
                 setLeader("s" + max);
-                // leader = "s".concat(max.toString());
-                // System.out.printf("%s is the new leader\n", leader);
             } else {
                 JSONObject coordResponse = new JSONObject();
                 coordResponse.put("type", "coordinator");
                 coordResponse.put("leader", serverId);
                 broadcast(coordResponse);
                 setLeader(serverId);
-                // System.out.printf("%s is the new leader\n", serverId);
             }
         }
     }
@@ -168,16 +229,52 @@ public class ServerConnectionManager extends Thread {
         isViewReceived = val;
     }
 
-    public static boolean getisViewReceived() {
-        return isViewReceived;
+    public static void setisNomReceived(boolean val) {
+        isNomReceived = val;
+    }
+
+    public static boolean getisNomReceived() {
+        return isNomReceived;
+    }
+
+
+    public static void setisCordReceived(boolean val) {
+        isCordReceived = val;
+    }
+
+    public static boolean getisCordReceived() {
+        return isCordReceived;
+    }
+
+    public static void addToReceivedAnswers(String val) {
+        receivedAnswers.add(val);
+    }
+
+    public static void removeFromReceivedAnswers(String val) {
+        receivedAnswers.remove(val);
+    }
+
+    public  static void clearReceivedAnswers() {
+        receivedAnswers.clear();
+    }
+
+    public static String getMaxReceivedAnswer() {
+        int max = 0;
+        for (String server: getReceivedAnswers()) {
+            int serverNum = Integer.parseInt(server.substring(1));
+            if (serverNum > max) {
+                max = serverNum;
+            }
+        }
+        return("s" + max);
+    }
+
+    public static Set<String> getReceivedAnswers() {
+        return receivedAnswers;
     }
 
     public static void setReceivedView(Set<String> view) {
         receivedView = view;
-    }
-
-    public static Set<String> getReceivedView() {
-        return receivedView;
     }
 
     public static boolean isLeader() {
@@ -205,6 +302,9 @@ public class ServerConnectionManager extends Thread {
         return serverConfigMap.get(sId);
     }
 
+    public static int getT4() {
+        return T4;
+    }
     public static void broadcast(JSONObject msg) {
         for (Map.Entry<String, HashMap<String, String>> entry : serverConfigMap.entrySet()) {
             String currentServerId = entry.getKey();

@@ -10,7 +10,10 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
+
 
 public class ServerHandler extends Thread {
     private Socket clientSocket;
@@ -148,6 +151,46 @@ public class ServerHandler extends Thread {
             if (myServer < serverNum) {
                 ServerConnectionManager.setLeader(newLeader);
             }
+        }
+        if (msgType.equals("election")) {
+            String sender = (String) request.get("sender");
+            int senderNum = Integer.parseInt(sender.substring(1));
+            String serverId = ServerConnectionManager.getServerId();
+            int myServer = Integer.parseInt(serverId.substring(1));
+            if (senderNum < myServer) {
+                JSONObject response = new JSONObject();
+                response.put("type", "answer");
+                response.put("sender", serverId);
+                ServerConnectionManager.sendToServer(response, sender);
+                Instant startTime = Instant.now();
+                boolean received = false;
+                while (Duration.between(startTime, Instant.now()).getNano()/1000/1000 < ServerConnectionManager.getT4()) {
+                    if (ServerConnectionManager.getisNomReceived() || ServerConnectionManager.getisCordReceived()) {
+                        received = true;
+                        ServerConnectionManager.setisNomReceived(false);
+                        break;
+                    }
+                }
+                if (!received) {
+                    ServerConnectionManager.electLeaderFailure();
+                }
+            }
+        }
+        if (msgType.equals("nomination")) {
+            String sender = (String) request.get("sender");
+            int senderNum = Integer.parseInt(sender.substring(1));
+            String serverId = ServerConnectionManager.getServerId();
+            int myServer = Integer.parseInt(serverId.substring(1));
+            if (senderNum < myServer) {
+                JSONObject coordMsg = new JSONObject();
+                coordMsg.put("type", "coordinator");
+                coordMsg.put("leader", serverId);
+                ServerConnectionManager.broadcast(coordMsg);
+            }
+        }
+        if (msgType.equals("answer")) {
+            String sender = (String) request.get("sender");
+            ServerConnectionManager.addToReceivedAnswers(sender);
         }
         if (msgType.equals(HeartBeatScheduler.HEARTBEAT)) {
             String server_id = (String) request.get("server");
