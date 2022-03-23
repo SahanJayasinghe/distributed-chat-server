@@ -46,12 +46,12 @@ public class ClientHandler extends Thread {
 //                if(ServerConnectionManager.getIsElectionRunning()){
 //                    CustomLock.customWait();
 //                }
-                if (ServerConnectionManager.getIsElectionRunning() || !ServerConnectionManager.getLeaderStatusUpdated()){
+                if (ServerConnectionManager.getIsElectionRunning() || !ServerConnectionManager.getStatusUpdated()){
 //                    System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>loop");
                     continue;
 
                 }
-                System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>end waiting");
+//                System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>end waiting");
                 inputLine = in.readLine();
                 System.out.println(">>> Client Request: " + inputLine);
                 if (inputLine != null) {

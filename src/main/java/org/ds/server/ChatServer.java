@@ -43,7 +43,7 @@ public class ChatServer {
 //                }
 //                System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>endloopserver");
 
-                if (!ServerConnectionManager.getIsElectionRunning() && ServerConnectionManager.getLeaderStatusUpdated())
+                if (!ServerConnectionManager.getIsElectionRunning() && ServerConnectionManager.getStatusUpdated())
                     new ClientHandler(serverSocket.accept()).start();
             }
 

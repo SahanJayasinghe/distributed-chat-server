@@ -39,7 +39,7 @@ public class ServerConnectionManager extends Thread {
     private static Set<String> receivedView;
     private static Set<String> onlineServers;
     private static boolean isElectionRunning = false;
-    private static boolean leaderStatusUpdated = false;
+    private static boolean statusUpdated = false;
     public static Semaphore s = new Semaphore(1);
 
     // time constants in ms
@@ -310,13 +310,13 @@ public class ServerConnectionManager extends Thread {
 //        CustomLock.customNotifyAll();
     }
 
-    public static boolean getLeaderStatusUpdated() {
-        return leaderStatusUpdated;
+    public static boolean getStatusUpdated() {
+        return statusUpdated;
     }
 
-    public static void setLeaderStatusUpdated(boolean b) {
-        if (b) System.out.println("Leader status updated! Ready to server client requests.");
-        leaderStatusUpdated = b;
+    public static void setStatusUpdated(boolean b) {
+        if (b) System.out.println("Status updated! Ready to serve client requests.");
+        statusUpdated = b;
     }
 
     public static String getMaxReceivedAnswer() {
@@ -371,54 +371,54 @@ public class ServerConnectionManager extends Thread {
 //        } catch (InterruptedException e) {
 //            e.printStackTrace();
 //        }
-        setLeaderStatusUpdated(false);
+        setStatusUpdated(false);
         setIsElectionRunning(false);
 
         JSONObject msg = new JSONObject();
         msg.put("type", "statusRequest");
-        if (isLeader()) {
-            for (Map.Entry<String, HashMap<String, String>> entry : serverConfigMap.entrySet()) {
-                String currentServerId = entry.getKey();
-                if (!currentServerId.equals(serverId) && onlineServers.contains(currentServerId)) {
-                    try {
-                        Socket s = new Socket(
-                                entry.getValue().get("address"),
-                                Integer.parseInt(entry.getValue().get("coordPort")));
-                        DataOutputStream out = new DataOutputStream(s.getOutputStream());
-                        out.write((msg.toJSONString() + "\n").getBytes(StandardCharsets.UTF_8));
-                        out.flush();
-                        BufferedReader in = new BufferedReader(
-                                new InputStreamReader(s.getInputStream(), StandardCharsets.UTF_8));
-                        JSONObject res = (JSONObject) jsonParser.parse(in.readLine());
-                        // res = {"serverId": "s1", "clientIds": "(john, adel)", "roomIds": "(room1, room2)"}
-                        System.out.println("Server Status: " + res.toJSONString());
-                        String sId = (String) res.get("serverId");
+        for (Map.Entry<String, HashMap<String, String>> entry : serverConfigMap.entrySet()) {
+            String currentServerId = entry.getKey();
+            if (!currentServerId.equals(serverId) && onlineServers.contains(currentServerId)) {
+                try {
+                    Socket s = new Socket(
+                            entry.getValue().get("address"),
+                            Integer.parseInt(entry.getValue().get("coordPort")));
+                    DataOutputStream out = new DataOutputStream(s.getOutputStream());
+                    out.write((msg.toJSONString() + "\n").getBytes(StandardCharsets.UTF_8));
+                    out.flush();
+                    BufferedReader in = new BufferedReader(
+                            new InputStreamReader(s.getInputStream(), StandardCharsets.UTF_8));
+                    JSONObject res = (JSONObject) jsonParser.parse(in.readLine());
+                    // res = {"serverId": "s1", "clientIds": "(john, adel)", "roomIds": "(room1, room2)"}
+                    System.out.println("Server Status: " + res.toJSONString());
+                    String sId = (String) res.get("serverId");
+                    if (isLeader()) {
                         String clientIdsList = (String) res.get("clientIds");
                         String[] cIds = clientIdsList.substring(1, clientIdsList.length() - 1).split("\\s*,\\s*");
                         HashSet<String> cIdsSet = new HashSet<>(Arrays.asList(cIds));
                         ServerState.addServerClientIds(sId, cIdsSet);
-
-                        String roomIdsList = (String) res.get("clientIds");
-                        String[] rIds = roomIdsList.substring(1, roomIdsList.length() - 1).split("\\s*,\\s*");
-                        HashSet<String> rIdsSet = new HashSet<>(Arrays.asList(rIds));
-                        ServerState.addServerRoomIds(sId, rIdsSet);
-
-                        out.close();
-                        in.close();
-                        s.close();
-                    } catch (IOException e) {
-                        System.out.printf("statusRequest message to %s failed\n", currentServerId);
-                        // e.printStackTrace();
-                    } catch (ParseException e) {
-                        e.printStackTrace();
                     }
+
+                    String roomIdsList = (String) res.get("roomIds");
+                    String[] rIds = roomIdsList.substring(1, roomIdsList.length() - 1).split("\\s*,\\s*");
+                    HashSet<String> rIdsSet = new HashSet<>(Arrays.asList(rIds));
+                    ServerState.addServerRoomIds(sId, rIdsSet);
+
+                    out.close();
+                    in.close();
+                    s.close();
+                } catch (IOException e) {
+                    System.out.printf("statusRequest message to %s failed\n", currentServerId);
+                    // e.printStackTrace();
+                } catch (ParseException e) {
+                    e.printStackTrace();
                 }
             }
-            setLeaderStatusUpdated(true);
-            JSONObject ack = new JSONObject();
-            ack.put("type", "leaderStatusUpdated");
-            broadcast(ack);
         }
+        setStatusUpdated(true);
+        JSONObject ack = new JSONObject();
+        ack.put("type", "statusUpdated");
+        broadcast(ack);
     }
 
     public static Set<String> getServerIds() {

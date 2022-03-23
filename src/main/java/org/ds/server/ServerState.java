@@ -21,15 +21,18 @@ public class ServerState {
         clientIds = new ConcurrentHashMap<>();
         clientIds.put(serverId, new HashSet<>());
         roomIds = new ConcurrentHashMap<>();
-        ServerConnectionManager.getServerIds().forEach(sId -> {
-//            if (ServerConnectionManager.isLeader()) {
-//                clientIds.put(sId, new HashSet<>());
-//            }
-            clientIds.put(sId, new HashSet<>());
-            HashSet<String> currServerRooms = new HashSet<>();
-            currServerRooms.add(MAINHALL_PREFIX + sId);
-            roomIds.put(sId, currServerRooms);
-        });
+        HashSet<String> defaultRoomIds = new HashSet<>();
+        defaultRoomIds.add(MAINHALL_PREFIX + serverId);
+        roomIds.put(serverId, defaultRoomIds);
+//        ServerConnectionManager.getServerIds().forEach(sId -> {
+////            if (ServerConnectionManager.isLeader()) {
+////                clientIds.put(sId, new HashSet<>());
+////            }
+//            clientIds.put(sId, new HashSet<>());
+//            HashSet<String> currServerRooms = new HashSet<>();
+//            currServerRooms.add(MAINHALL_PREFIX + sId);
+//            roomIds.put(sId, currServerRooms);
+//        });
 
         rooms = new ConcurrentHashMap<>();
         rooms.put(mainHallId, new ChatRoom(mainHallId));
@@ -163,6 +166,9 @@ public class ServerState {
 
     public static synchronized void addServerRoomIds(String sId, HashSet<String> ids) {
         synchronized (roomIdsLock) {
+            if (roomIds.contains(sId)) {
+                roomIds.get(sId).addAll(ids);
+            }
             roomIds.put(sId, ids);
         }
     }
@@ -243,7 +249,9 @@ public class ServerState {
     }
 
     public static synchronized void updateStateOnServerUp(String sId) {
-        addServerRoomIds(sId, new HashSet<>());
+        HashSet<String> defaultRooms = new HashSet<>();
+        defaultRooms.add(MAINHALL_PREFIX + sId);
+        addServerRoomIds(sId, defaultRooms);
         if (ServerConnectionManager.isLeader()) {
             addServerClientIds(sId, new HashSet<>());
         }

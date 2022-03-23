@@ -139,6 +139,7 @@ public class ServerHandler extends Thread {
             String sender = (String) request.get("sender");
             ServerConnectionManager.addServerToReceivedView(sender);
             ServerConnectionManager.addServerToOnlineServers(sender);
+            ServerState.updateStateOnServerUp(sender);
             String view = ServerConnectionManager.getOnlineServers().toString();
             JSONObject response = new JSONObject();
             response.put("type", "view");
@@ -254,8 +255,8 @@ public class ServerHandler extends Thread {
             res.put("roomIds", ServerState.getRoomIds().toString());
             sendMessage(res);
         }
-        if (msgType.equals("leaderStatusUpdated")) {
-            ServerConnectionManager.setLeaderStatusUpdated(true);
+        if (msgType.equals("statusUpdated")) {
+            ServerConnectionManager.setStatusUpdated(true);
         }
         alive = false;
     }
