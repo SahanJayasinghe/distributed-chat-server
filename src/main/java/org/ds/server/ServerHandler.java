@@ -37,15 +37,15 @@ public class ServerHandler extends Thread {
             out = new DataOutputStream(clientSocket.getOutputStream());
             in = new BufferedReader(
                     new InputStreamReader(clientSocket.getInputStream(), StandardCharsets.UTF_8));
-            System.out.printf("new connection from server running on %s\n",
-                    clientSocket.getRemoteSocketAddress().toString());
+//            System.out.printf("new connection from server running on %s\n",
+//                    clientSocket.getRemoteSocketAddress().toString());
 
             String inputLine;
             JSONObject req;
 
             while (alive) {
                 inputLine = in.readLine();
-                System.out.println("Received: " + inputLine);
+//                System.out.println("Received: " + inputLine);
                 if (inputLine != null) {
                     req = (JSONObject) jsonParser.parse(inputLine);
                     handleRequest(req);
@@ -63,6 +63,7 @@ public class ServerHandler extends Thread {
 
     public void handleRequest(JSONObject request) {
         String msgType = (String) request.get("type");
+        if (!msgType.equals(HeartBeatScheduler.HEARTBEAT)) System.out.println(">>> Server Request: " + request.toJSONString());
         if (ServerConnectionManager.isLeader()) {
             if (msgType.equals("newclient")) {
                 String id = (String) request.get("id");
@@ -132,7 +133,7 @@ public class ServerHandler extends Thread {
                     (String) request.get("serverid"));
         }
         if(msgType.equals(DELETE_SERVER_ROOMS)){
-            ServerState.removeServerRooms((String) request.get("serverId"));
+            ServerState.removeServerRoomIds((String) request.get("serverId"));
         }
         if (msgType.equals("IamUp")) {
             String sender = (String) request.get("sender");
@@ -209,21 +210,27 @@ public class ServerHandler extends Thread {
         if (msgType.equals(HeartBeatScheduler.SERVER_DOWN)) {
             String server_id = (String) request.get("server");
             System.out.println("Recieved the failure msg - failed server id : " + server_id);
-            JSONObject deleteRoomsResponse = new JSONObject();
-            deleteRoomsResponse.put("type", DELETE_SERVER_ROOMS);
-            deleteRoomsResponse.put("serverId", server_id);
-            ServerConnectionManager.broadcast(deleteRoomsResponse, server_id);
-            ServerConnectionManager.removeServerFromOnlineServers(server_id);
-            if (ServerConnectionManager.isLeader() || ServerConnectionManager.getLeader().equals(server_id)) {
-                JSONObject response = new JSONObject();
-                response.put("type", HeartBeatScheduler.SERVER_DOWN);
-                response.put("server", server_id);
-                ServerConnectionManager.broadcast(response, server_id);
-            }
-            if (ServerConnectionManager.getLeader().equals(server_id)) {
-                ServerConnectionManager.electLeaderFailure();
-                System.out.println("Leader Failed! new election started");
-            }
+//            ServerConnectionManager.removeServerFromOnlineServers(server_id);
+//            ServerState.updateStateOnServerDown(server_id);
+//            if (ServerConnectionManager.getLeader().equals(server_id)) {
+//                ServerConnectionManager.setIsElectionRunning(true);
+//            }
+
+//            JSONObject deleteRoomsResponse = new JSONObject();
+//            deleteRoomsResponse.put("type", DELETE_SERVER_ROOMS);
+//            deleteRoomsResponse.put("serverId", server_id);
+//            ServerConnectionManager.broadcast(deleteRoomsResponse, server_id);
+//            ServerConnectionManager.removeServerFromOnlineServers(server_id);
+//            if (ServerConnectionManager.isLeader() || ServerConnectionManager.getLeader().equals(server_id)) {
+//                JSONObject response = new JSONObject();
+//                response.put("type", HeartBeatScheduler.SERVER_DOWN);
+//                response.put("server", server_id);
+//                ServerConnectionManager.broadcast(response, server_id);
+//            }
+//            if (ServerConnectionManager.getLeader().equals(server_id)) {
+//                ServerConnectionManager.electLeaderFailure();
+//                System.out.println("Leader Failed! new election started");
+//            }
         }
         if (msgType.equals("areYouThere")) {
             String sender = (String) request.get("sender");
@@ -239,6 +246,16 @@ public class ServerHandler extends Thread {
             String sender = (String) request.get("server");
             System.out.println("Recieved IamHere msg from : " + sender);
             ServerConnectionManager.addServerToOnlineServers(sender);
+        }
+        if (msgType.equals("statusRequest")) {
+            JSONObject res = new JSONObject();
+            res.put("serverId", ServerConnectionManager.getServerId());
+            res.put("clientIds", ServerState.getClientIds().toString());
+            res.put("roomIds", ServerState.getRoomIds().toString());
+            sendMessage(res);
+        }
+        if (msgType.equals("leaderStatusUpdated")) {
+            ServerConnectionManager.setLeaderStatusUpdated(true);
         }
         alive = false;
     }

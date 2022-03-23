@@ -13,10 +13,7 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 
@@ -37,11 +34,12 @@ public class ServerConnectionManager extends Thread {
     private static boolean isViewReceived = false;
     private static boolean isCordReceived = false;
     private static boolean isNomReceived = false;
-    private static ConcurrentHashMap receivedAnswersMap = new ConcurrentHashMap<>();
+    private static ConcurrentHashMap<String, String> receivedAnswersMap = new ConcurrentHashMap<>();
     private static Set<String> receivedAnswers;
     private static Set<String> receivedView;
     private static Set<String> onlineServers;
     private static boolean isElectionRunning = false;
+    private static boolean leaderStatusUpdated = false;
     public static Semaphore s = new Semaphore(1);
 
     // time constants in ms
@@ -59,7 +57,7 @@ public class ServerConnectionManager extends Thread {
             onlineServers.add(serverId);
             receivedView = new HashSet<>();
             int serverPort = Integer.parseInt(serverConfigMap.get(serverId).get("coordPort"));
-            System.out.println(serverPort);
+            System.out.println("Server is listening server connections on port " + serverPort);
             serverSocket = new ServerSocket(serverPort);
             jsonParser = new JSONParser();
         } catch (IOException e) {
@@ -302,14 +300,24 @@ public class ServerConnectionManager extends Thread {
     public static void clearReceivedAnswers() {
         receivedAnswers.clear();
     }
+
     public static boolean getIsElectionRunning(){
         return isElectionRunning;
     }
+
     public static void setIsElectionRunning(boolean _isElectionRunning){
         isElectionRunning = _isElectionRunning;
 //        CustomLock.customNotifyAll();
     }
 
+    public static boolean getLeaderStatusUpdated() {
+        return leaderStatusUpdated;
+    }
+
+    public static void setLeaderStatusUpdated(boolean b) {
+        if (b) System.out.println("Leader status updated! Ready to server client requests.");
+        leaderStatusUpdated = b;
+    }
 
     public static String getMaxReceivedAnswer() {
         int max = 0;
@@ -356,14 +364,61 @@ public class ServerConnectionManager extends Thread {
 
     public static void setLeader(String newLeader) {
         leader = newLeader;
-        System.out.printf("%s is the new leader line: 359\n", leader);
+        System.out.printf("%s is the new leader!\n", leader);
 
 //        try {
 //            Thread.sleep(10000);
 //        } catch (InterruptedException e) {
 //            e.printStackTrace();
 //        }
+        setLeaderStatusUpdated(false);
         setIsElectionRunning(false);
+
+        JSONObject msg = new JSONObject();
+        msg.put("type", "statusRequest");
+        if (isLeader()) {
+            for (Map.Entry<String, HashMap<String, String>> entry : serverConfigMap.entrySet()) {
+                String currentServerId = entry.getKey();
+                if (!currentServerId.equals(serverId) && onlineServers.contains(currentServerId)) {
+                    try {
+                        Socket s = new Socket(
+                                entry.getValue().get("address"),
+                                Integer.parseInt(entry.getValue().get("coordPort")));
+                        DataOutputStream out = new DataOutputStream(s.getOutputStream());
+                        out.write((msg.toJSONString() + "\n").getBytes(StandardCharsets.UTF_8));
+                        out.flush();
+                        BufferedReader in = new BufferedReader(
+                                new InputStreamReader(s.getInputStream(), StandardCharsets.UTF_8));
+                        JSONObject res = (JSONObject) jsonParser.parse(in.readLine());
+                        // res = {"serverId": "s1", "clientIds": "(john, adel)", "roomIds": "(room1, room2)"}
+                        System.out.println("Server Status: " + res.toJSONString());
+                        String sId = (String) res.get("serverId");
+                        String clientIdsList = (String) res.get("clientIds");
+                        String[] cIds = clientIdsList.substring(1, clientIdsList.length() - 1).split("\\s*,\\s*");
+                        HashSet<String> cIdsSet = new HashSet<>(Arrays.asList(cIds));
+                        ServerState.addServerClientIds(sId, cIdsSet);
+
+                        String roomIdsList = (String) res.get("clientIds");
+                        String[] rIds = roomIdsList.substring(1, roomIdsList.length() - 1).split("\\s*,\\s*");
+                        HashSet<String> rIdsSet = new HashSet<>(Arrays.asList(rIds));
+                        ServerState.addServerRoomIds(sId, rIdsSet);
+
+                        out.close();
+                        in.close();
+                        s.close();
+                    } catch (IOException e) {
+                        System.out.printf("statusRequest message to %s failed\n", currentServerId);
+                        // e.printStackTrace();
+                    } catch (ParseException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+            setLeaderStatusUpdated(true);
+            JSONObject ack = new JSONObject();
+            ack.put("type", "leaderStatusUpdated");
+            broadcast(ack);
+        }
     }
 
     public static Set<String> getServerIds() {
@@ -437,10 +492,10 @@ public class ServerConnectionManager extends Thread {
     }
 
     public static void addServerToOnlineServers(String server_id) {
-        System.out.println("onlineServers : " + onlineServers);
+//        System.out.println("onlineServers : " + onlineServers);
         onlineServers.add(server_id);
-        System.out.println("added to online servers - server id : " + server_id);
-        System.out.println("onlineServers : " + onlineServers);
+//        System.out.println("added to online servers - server id : " + server_id);
+//        System.out.println("onlineServers : " + onlineServers);
     }
 
     public static void concatOnlineServers(Set<String> servers) {
@@ -448,5 +503,3 @@ public class ServerConnectionManager extends Thread {
             onlineServers.addAll(servers);
     }
 }
-
-

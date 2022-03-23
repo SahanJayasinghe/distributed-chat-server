@@ -46,13 +46,14 @@ public class ClientHandler extends Thread {
 //                if(ServerConnectionManager.getIsElectionRunning()){
 //                    CustomLock.customWait();
 //                }
-                while(ServerConnectionManager.getIsElectionRunning()){
-                    System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>loop");
+                if (ServerConnectionManager.getIsElectionRunning() || !ServerConnectionManager.getLeaderStatusUpdated()){
+//                    System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>loop");
+                    continue;
 
                 }
-                System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>endloop");
+                System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>end waiting");
                 inputLine = in.readLine();
-                System.out.println("Received: " + inputLine);
+                System.out.println(">>> Client Request: " + inputLine);
                 if (inputLine != null) {
                     req = (JSONObject) jsonParser.parse(inputLine);
                     handleRequest(req);

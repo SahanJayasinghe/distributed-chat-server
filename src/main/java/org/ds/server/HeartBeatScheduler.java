@@ -17,10 +17,11 @@ public class HeartBeatScheduler {
     HashMap<String, HashMap<String, String>> serverConfig;
 
     public static void updateHeartbeatReceivedTimes(String server_id) {
-        System.out.println("Heartbeat recieved from : " + server_id);
+//        System.out.println("Heartbeat recieved from : " + server_id);
         heartbeatReceivedTimes.put(server_id, System.nanoTime());
         if(!ServerConnectionManager.getOnlineServers().contains(server_id)){
             ServerConnectionManager.addServerToOnlineServers(server_id);
+            ServerState.updateStateOnServerUp(server_id);
         }
 
     }
@@ -45,25 +46,30 @@ public class HeartBeatScheduler {
                     e.printStackTrace();
                 }
                 Long now = System.nanoTime();
-                String leader = ServerConnectionManager.getLeader();
+//                String leader = ServerConnectionManager.getLeader();
                 Set<String> serverIds = heartbeatReceivedTimes.keySet();
                 for (String server_Id : serverIds) {
                     if (!serverId.equals(server_Id) && ServerConnectionManager.getOnlineServers().contains(server_Id)) {
                         Long lastHeartbeatReceivedTime = (Long) heartbeatReceivedTimes.get(server_Id);
                         Long timeSinceLastHeartbeat = now - lastHeartbeatReceivedTime;
                         if (timeSinceLastHeartbeat >= HEARTBEAT_INTERVEL * 1000000) {
-                            if (server_Id.equals(leader)) {
+                            if (server_Id.equals(ServerConnectionManager.getLeader())) {
                                 System.out.println("leader failed");
+                                ServerConnectionManager.removeServerFromOnlineServers(server_Id);
+                                ServerState.updateStateOnServerDown(server_Id);
                                 ServerConnectionManager.electLeaderFailure(); // send leader elect msg
                             } else {
                                 System.out.println("Server failed - " + server_Id);
+                                ServerConnectionManager.removeServerFromOnlineServers(server_Id);
+                                ServerState.updateStateOnServerDown(server_Id);
                                 // notify leader
-                                JSONObject msg = new JSONObject();
-                                msg.put("type", SERVER_DOWN);
-                                msg.put("server", server_Id);
-                                ServerConnectionManager.sendToLeader(msg);
-                                System.out.println("Server failure notified to leader");
+//                                System.out.println("Server failure notified to leader");
                             }
+                            JSONObject msg = new JSONObject();
+                            msg.put("type", SERVER_DOWN);
+                            msg.put("server", server_Id);
+//                          ServerConnectionManager.sendToLeader(msg);
+                            ServerConnectionManager.broadcast(msg, server_Id);
                         }
                     }
 
@@ -77,18 +83,20 @@ public class HeartBeatScheduler {
         public void run() {
             while (true) {
                 // Set<String> serverIds = heartbeatReceivedTimes.keySet();
-                Set<String> serverIds = ServerConnectionManager.getOnlineServers();
-                System.out.println("Leader : " + ServerConnectionManager.getLeader());
-                System.out.println("online servers " + serverIds);
-                for (String server_Id : serverIds) {
-                    if (!server_Id.equals(serverId)) {
-                        JSONObject msg = new JSONObject();
-                        msg.put("type", HEARTBEAT);
-                        msg.put("server", serverId);
-                        ServerConnectionManager.sendToServer(msg, server_Id);
-                        System.out.println("Heartbeat sent! to :" + server_Id);
-                    }
-                }
+                JSONObject msg = new JSONObject();
+                msg.put("type", HEARTBEAT);
+                msg.put("server", serverId);
+                ServerConnectionManager.broadcast(msg);
+//                    Set<String> serverIds = ServerConnectionManager.getOnlineServers();
+//                System.out.println("Leader : " + ServerConnectionManager.getLeader());
+//                System.out.println("online servers " + serverIds);
+//                    for (String server_Id : serverIds) {
+//                        if (!server_Id.equals(serverId)) {
+//
+//                            ServerConnectionManager.sendToServer(msg, server_Id);
+////                            System.out.println("Heartbeat sent! to :" + server_Id);
+//                        }
+//                    }
                 try {
                     Thread.sleep(HEARTBEAT_INTERVEL);
                 } catch (InterruptedException e) {

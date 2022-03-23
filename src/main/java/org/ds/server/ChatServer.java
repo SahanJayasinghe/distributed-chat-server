@@ -24,27 +24,27 @@ public class ChatServer {
             serverId = args[0].strip();
             readConfigFile(args[1].strip());
             serverSocket = new ServerSocket(this.port);
-            System.out.println("Server is listening on port " + port);
+            System.out.println("Server is listening client connections on port " + port);
             ServerConnectionManager.init(serverId, serverConfig);
+            ServerState.init();
             ServerConnectionManager.updateOnlineServers();
             HeartBeatScheduler heartBeatScheduler = new HeartBeatScheduler(serverConfig, serverId);
             new ServerConnectionManager().start();
             ServerConnectionManager.electLeader();
 
             heartBeatScheduler.start();
-            ServerState.init();
             while (!serverSocket.isClosed()){
 //                if(ServerConnectionManager.getIsElectionRunning()){
 //                    CustomLock.customWait();
 //                }
-                while(ServerConnectionManager.getIsElectionRunning()){
-//                    System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>loopserver");
-//                    System.out.println(ServerConnectionManager.getIsElectionRunning());
+//                while(ServerConnectionManager.getIsElectionRunning() || !ServerConnectionManager.getLeaderStatusUpdated()){
+////                    System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>loopserver");
+////                    System.out.println(ServerConnectionManager.getIsElectionRunning());
+//                }
+//                System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>endloopserver");
 
-                }
-                System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>endloopserver");
-
-                new ClientHandler(serverSocket.accept()).start();
+                if (!ServerConnectionManager.getIsElectionRunning() && ServerConnectionManager.getLeaderStatusUpdated())
+                    new ClientHandler(serverSocket.accept()).start();
             }
 
         } catch (IOException ex) {

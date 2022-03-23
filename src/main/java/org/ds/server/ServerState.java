@@ -11,6 +11,8 @@ public class ServerState {
     private static ConcurrentHashMap<String, HashSet<String>> clientIds;
     private static ConcurrentHashMap<String, HashSet<String>> roomIds;
     private static Map<String, ChatRoom> rooms;
+    private static final Object clientIdsLock = new Object();
+    private static final Object roomIdsLock = new Object();
 //    private static String serverId;
 
     public static void init() {
@@ -20,9 +22,10 @@ public class ServerState {
         clientIds.put(serverId, new HashSet<>());
         roomIds = new ConcurrentHashMap<>();
         ServerConnectionManager.getServerIds().forEach(sId -> {
-            if (ServerConnectionManager.isLeader()) {
-                clientIds.put(sId, new HashSet<>());
-            }
+//            if (ServerConnectionManager.isLeader()) {
+//                clientIds.put(sId, new HashSet<>());
+//            }
+            clientIds.put(sId, new HashSet<>());
             HashSet<String> currServerRooms = new HashSet<>();
             currServerRooms.add(MAINHALL_PREFIX + sId);
             roomIds.put(sId, currServerRooms);
@@ -76,12 +79,18 @@ public class ServerState {
     }
 
     private static synchronized void updateClientIds(String id, String sId, boolean add) {
-        if (add) {
-            clientIds.get(sId).add(id);
+        synchronized (clientIdsLock) {
+            if (add) {
+                clientIds.get(sId).add(id);
+            }
+            else {
+                clientIds.get(sId).remove(id);
+            }
         }
-        else {
-            clientIds.get(sId).remove(id);
-        }
+    }
+
+    public static Set<String> getClientIds() {
+        return clientIds.get(ServerConnectionManager.getServerId());
     }
 
     public static synchronized void switchServer(String clientId, String formerServer, String newServer) {
@@ -116,26 +125,56 @@ public class ServerState {
         return isUnique;
     }
 
+
+    public static synchronized void addServerClientIds(String sId, HashSet<String> ids) {
+        synchronized (clientIdsLock) {
+            clientIds.put(sId, ids);
+        }
+    }
+
+    public static synchronized void removeServerClientIds(String serverId) {
+        synchronized (clientIdsLock) {
+            clientIds.remove(serverId);
+        }
+    }
+
     public static synchronized void addRoomId(String roomId, String sId) {
-        updateRoomIds(roomId, sId, true);
+        synchronized (roomIdsLock) {
+            updateRoomIds(roomId, sId, true);
+        }
     }
 
     public static synchronized void removeRoomId(String roomId, String sId) {
-        updateRoomIds(roomId, sId, false);
+        synchronized (roomIdsLock) {
+            updateRoomIds(roomId, sId, false);
+        }
     }
-
-    public static synchronized void removeServerRooms(String serverId){
-        roomIds.get(serverId);
-    }
-
 
     private static synchronized void updateRoomIds(String roomId, String sId, boolean add) {
-        if (add) {
-            roomIds.get(sId).add(roomId);
+        synchronized (roomIdsLock) {
+            if (add) {
+                roomIds.get(sId).add(roomId);
+            }
+            else {
+                roomIds.get(sId).remove(roomId);
+            }
         }
-        else {
-            roomIds.get(sId).remove(roomId);
+    }
+
+    public static synchronized void addServerRoomIds(String sId, HashSet<String> ids) {
+        synchronized (roomIdsLock) {
+            roomIds.put(sId, ids);
         }
+    }
+
+    public static synchronized void removeServerRoomIds(String serverId){
+        synchronized (roomIdsLock) {
+            roomIds.remove(serverId);
+        }
+    }
+
+    public static Set<String> getRoomIds() {
+        return rooms.keySet();
     }
 
     public static String findServerContainingRoom(String roomId) {
@@ -201,5 +240,19 @@ public class ServerState {
 
     public static String getRoomOwner(String roomId) {
         return rooms.get(roomId).getOwnerId();
+    }
+
+    public static synchronized void updateStateOnServerUp(String sId) {
+        addServerRoomIds(sId, new HashSet<>());
+        if (ServerConnectionManager.isLeader()) {
+            addServerClientIds(sId, new HashSet<>());
+        }
+    }
+
+    public static synchronized void updateStateOnServerDown(String sId) {
+        removeServerRoomIds(sId);
+        if (ServerConnectionManager.isLeader()) {
+            removeServerClientIds(sId);
+        }
     }
 }
