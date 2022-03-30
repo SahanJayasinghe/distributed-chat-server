@@ -3,16 +3,17 @@ package org.ds.server;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.net.SocketAddress;
 import java.util.HashMap;
 import java.util.Scanner;
-import java.util.concurrent.Semaphore;
 
 
 public class ChatServer {
     private String serverId = null;
-    private int port;
-    private ServerSocket serverSocket;
+    private int clientPort;
+    private ServerSocket clientConnectionSocket;
     private HashMap<String, HashMap<String, String>> serverConfig;
 
     public ChatServer() {
@@ -23,8 +24,10 @@ public class ChatServer {
         try {
             serverId = args[0].strip();
             readConfigFile(args[1].strip());
-            serverSocket = new ServerSocket(this.port);
-            System.out.println("Server is listening client connections on port " + port);
+            clientConnectionSocket = new ServerSocket();
+            SocketAddress clientEndPoint = new InetSocketAddress("0.0.0.0", clientPort);
+            clientConnectionSocket.bind(clientEndPoint);
+            System.out.println("Server is listening client connections on port " + clientPort);
             ServerConnectionManager.init(serverId, serverConfig);
             ServerState.init();
             ServerConnectionManager.updateOnlineServers();
@@ -33,7 +36,7 @@ public class ChatServer {
             ServerConnectionManager.electLeader();
 
             heartBeatScheduler.start();
-            while (!serverSocket.isClosed()){
+            while (!clientConnectionSocket.isClosed()){
 //                if(ServerConnectionManager.getIsElectionRunning()){
 //                    CustomLock.customWait();
 //                }
@@ -44,7 +47,7 @@ public class ChatServer {
 //                System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>endloopserver");
 
                 if (!ServerConnectionManager.getIsElectionRunning() && ServerConnectionManager.getStatusUpdated())
-                    new ClientHandler(serverSocket.accept()).start();
+                    new ClientHandler(clientConnectionSocket.accept()).start();
             }
 
         } catch (IOException ex) {
@@ -71,7 +74,7 @@ public class ChatServer {
                 currentConfig.put("coordPort", data[3]);
                 serverConfig.put(data[0], currentConfig);
                 if (serverId.equals(data[0])) {
-                    port = Integer.parseInt(data[2]);
+                    clientPort = Integer.parseInt(data[2]);
                     validServerId = true;
                 }
             }
@@ -87,7 +90,7 @@ public class ChatServer {
 
     public void stop() {
         try {
-            serverSocket.close();
+            clientConnectionSocket.close();
         } catch (IOException e) {
             e.printStackTrace();
         }

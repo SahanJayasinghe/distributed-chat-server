@@ -8,8 +8,10 @@ import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
@@ -57,8 +59,10 @@ public class ServerConnectionManager extends Thread {
             onlineServers.add(serverId);
             receivedView = new HashSet<>();
             int serverPort = Integer.parseInt(serverConfigMap.get(serverId).get("coordPort"));
+            serverSocket = new ServerSocket();
+            SocketAddress serverEndPoint = new InetSocketAddress("0.0.0.0", serverPort);
+            serverSocket.bind(serverEndPoint);
             System.out.println("Server is listening server connections on port " + serverPort);
-            serverSocket = new ServerSocket(serverPort);
             jsonParser = new JSONParser();
         } catch (IOException e) {
             e.printStackTrace();
