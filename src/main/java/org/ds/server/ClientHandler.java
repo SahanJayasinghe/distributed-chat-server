@@ -20,6 +20,7 @@ public class ClientHandler extends Thread {
     private String clientId = null;
     private String joinedRoomId = "";
     private String ownedRoomId = null;
+    private boolean quitting = false;
     private Socket clientSocket;
     private DataOutputStream out;
     private BufferedReader in;
@@ -58,7 +59,8 @@ public class ClientHandler extends Thread {
                     req = (JSONObject) jsonParser.parse(inputLine);
                     handleRequest(req);
                 } else {
-                    quit();
+                    if (!quitting)
+                        quit();
                     break;
                 }
             }
@@ -288,6 +290,7 @@ public class ClientHandler extends Thread {
     }
 
     private void quit() {
+        quitting = true;
         if (clientId != null && !joinedRoomId.equals("")) {
             ChatRoom currentRoom = ServerState.getRoom(joinedRoomId);
             currentRoom.removeMember(this);
@@ -311,9 +314,9 @@ public class ClientHandler extends Thread {
         }
 
         if (ownedRoomId != null) { // delete owned room
-            JSONObject delRoomMsg = new JSONObject();
-            delRoomMsg.put("type", "deleteroom");
-            delRoomMsg.put("roomid", ownedRoomId);
+//            JSONObject delRoomMsg = new JSONObject();
+//            delRoomMsg.put("type", "deleteroom");
+//            delRoomMsg.put("roomid", ownedRoomId);
             ServerState.moveMembers(ownedRoomId, ServerState.getMainHallId());
             ServerState.removeRoomId(ownedRoomId, ServerConnectionManager.getServerId());
             ownedRoomId = null;
@@ -323,8 +326,8 @@ public class ClientHandler extends Thread {
             roomIdRemoveMsg.put("clientid", clientId);
             roomIdRemoveMsg.put("serverid", ServerConnectionManager.getServerId());
             ServerConnectionManager.broadcast(roomIdRemoveMsg);
-            delRoomMsg.put("approved", "true");
-            sendMessage(delRoomMsg);
+//            delRoomMsg.put("approved", "true");
+//            sendMessage(delRoomMsg);
         }
     }
 
