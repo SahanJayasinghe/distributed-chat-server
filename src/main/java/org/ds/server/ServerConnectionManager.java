@@ -37,7 +37,6 @@ public class ServerConnectionManager extends Thread {
     private static boolean isCordReceived = false;
     private static boolean isNomReceived = false;
     private static ConcurrentHashMap<String, String> receivedAnswersMap = new ConcurrentHashMap<>();
-    private static Set<String> receivedAnswers;
     private static Set<String> receivedView;
     private static Set<String> onlineServers;
     private static boolean isElectionRunning = false;
@@ -53,7 +52,6 @@ public class ServerConnectionManager extends Thread {
         try {
             serverId = _serverId;
             serverConfigMap = _serverConfigMap;
-            receivedAnswers = receivedAnswersMap.keySet();
             T4 = 2000 / Integer.parseInt(serverId.substring(1));
             onlineServers = new HashSet<>();
             onlineServers.add(serverId);
@@ -294,15 +292,19 @@ public class ServerConnectionManager extends Thread {
     }
 
     public static void addToReceivedAnswers(String val) {
-        receivedAnswers.add(val);
+        receivedAnswersMap.put(val, val);
+        // receivedAnswers = receivedAnswersMap.keySet();
     }
 
     public static void removeFromReceivedAnswers(String val) {
-        receivedAnswers.remove(val);
+        receivedAnswersMap.remove(val);
+        // receivedAnswers = receivedAnswersMap.keySet();
+
     }
 
     public static void clearReceivedAnswers() {
-        receivedAnswers.clear();
+        receivedAnswersMap.clear();
+        // receivedAnswers = receivedAnswersMap.keySet();
     }
 
     public static boolean getIsElectionRunning(){
@@ -335,7 +337,7 @@ public class ServerConnectionManager extends Thread {
     }
 
     public static Set<String> getReceivedAnswers() {
-        return receivedAnswers;
+        return receivedAnswersMap.keySet();
     }
 
     public static Set<String> getReceivedView() {
@@ -369,7 +371,6 @@ public class ServerConnectionManager extends Thread {
     public static void setLeader(String newLeader) {
         leader = newLeader;
         System.out.printf("%s is the new leader!\n", leader);
-
 //        try {
 //            Thread.sleep(10000);
 //        } catch (InterruptedException e) {
@@ -458,7 +459,7 @@ public class ServerConnectionManager extends Thread {
                         out.write((msg.toJSONString() + "\n").getBytes(StandardCharsets.UTF_8));
                         out.flush();
                     } catch (IOException e) {
-                        System.out.printf("Broadcast message to %s failed\n", currentServerId);
+                        // System.out.printf("Broadcast message to %s failed\n", currentServerId);
                         // e.printStackTrace();
                     }
                 }
