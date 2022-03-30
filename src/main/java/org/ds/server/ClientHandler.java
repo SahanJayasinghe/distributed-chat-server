@@ -58,6 +58,7 @@ public class ClientHandler extends Thread {
                     req = (JSONObject) jsonParser.parse(inputLine);
                     handleRequest(req);
                 } else {
+                    quit();
                     break;
                 }
             }
@@ -263,7 +264,7 @@ public class ClientHandler extends Thread {
                 }
             }
         }
-        else if (!roomInThisServer) {
+        else if (!roomInThisServer && this.ownedRoomId == null) {
             String sId = ServerState.findServerContainingRoom(roomId);
             if (sId == null) {
                 sendMessage(getChangeRoomMsg(joinedRoomId));
