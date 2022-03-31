@@ -146,6 +146,9 @@ public class ClientHandler extends Thread {
                     joiningRoomId = ServerState.getMainHallId();
                 }
             }
+            else {
+                joiningRoomId = ServerState.getMainHallId();
+            }
             ServerState.addMemberToRoom(this, joiningRoomId);
 
             // inform leader about server change -> switch client id to relevant hashset
