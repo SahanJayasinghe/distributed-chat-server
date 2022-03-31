@@ -79,7 +79,8 @@ public class ServerHandler extends Thread {
                     response.put("approved", String.valueOf(approved));
                     sendMessage(response);
                 }
-            } else if (msgType.equals("newroom")) {
+            }
+            else if (msgType.equals("newroom")) {
                 String roomId = (String) request.get("id");
                 synchronized (newRoomLock) {
                     boolean approved = ServerState.isRoomIdUnique(roomId);
@@ -97,12 +98,14 @@ public class ServerHandler extends Thread {
                         sendMessage(res);
                     }
                 }
-            } else if (msgType.equals("switchserver")) {
+            }
+            else if (msgType.equals("serverswitch")) {
                 ServerState.switchServer(
                         (String) request.get("clientid"),
                         (String) request.get("formerserver"),
                         (String) request.get("newserver"));
-            } else if (msgType.equals("deleteclient")) {
+            }
+            else if (msgType.equals("deleteclient")) {
                 ServerState.removeClientId(
                         (String) request.get("clientid"),
                         (String) request.get("serverid"));
