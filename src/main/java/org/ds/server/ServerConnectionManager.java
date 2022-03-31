@@ -420,6 +420,15 @@ public class ServerConnectionManager extends Thread {
                 }
             }
         }
+        for (Map.Entry<String, HashMap<String, String>> entry : serverConfigMap.entrySet()) {
+            String currentServerId = entry.getKey();
+            if (!onlineServers.contains(currentServerId)) {
+                if (isLeader()) {
+                    ServerState.removeServerClientIds(currentServerId);
+                }
+                ServerState.removeServerRoomIds(currentServerId);
+            }
+        }
         setStatusUpdated(true);
         JSONObject ack = new JSONObject();
         ack.put("type", "statusUpdated");
