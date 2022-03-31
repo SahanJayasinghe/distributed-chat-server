@@ -52,7 +52,11 @@ public class HeartBeatScheduler {
                     if (!serverId.equals(server_Id) && ServerConnectionManager.getOnlineServers().contains(server_Id)) {
                         Long lastHeartbeatReceivedTime = (Long) heartbeatReceivedTimes.get(server_Id);
                         Long timeSinceLastHeartbeat = now - lastHeartbeatReceivedTime;
-                        if (timeSinceLastHeartbeat >= HEARTBEAT_INTERVEL * 1000000) {
+                        if (ServerConnectionManager.getIsElectionRunning()) {
+                            continue;
+//                            timeSinceLastHeartbeat = 0L;
+                        }
+                        if (timeSinceLastHeartbeat >= TIMEOUT * 1000000) {
                             if (server_Id.equals(ServerConnectionManager.getLeader())) {
                                 System.out.println("leader failed");
                                 ServerConnectionManager.removeServerFromOnlineServers(server_Id);

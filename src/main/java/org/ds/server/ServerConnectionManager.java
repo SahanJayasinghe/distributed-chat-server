@@ -45,7 +45,7 @@ public class ServerConnectionManager extends Thread {
 
     // time constants in ms
     private static final int T2 = 500;
-    private static final int T3 = 500;
+    private static final int T3 = 1000;
     private static int T4;
 
     public static void init(String _serverId, HashMap<String, HashMap<String, String>> _serverConfigMap) {

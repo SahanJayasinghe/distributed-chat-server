@@ -145,8 +145,8 @@ public class ClientHandler extends Thread {
                 if (ServerState.getRoom(joiningRoomId).isDeleting()) {
                     joiningRoomId = ServerState.getMainHallId();
                 }
-                ServerState.addMemberToRoom(this, joiningRoomId);
             }
+            ServerState.addMemberToRoom(this, joiningRoomId);
 
             // inform leader about server change -> switch client id to relevant hashset
             JSONObject leaderMsg = new JSONObject();
@@ -319,13 +319,13 @@ public class ClientHandler extends Thread {
 //            delRoomMsg.put("roomid", ownedRoomId);
             ServerState.moveMembers(ownedRoomId, ServerState.getMainHallId());
             ServerState.removeRoomId(ownedRoomId, ServerConnectionManager.getServerId());
-            ownedRoomId = null;
 
             JSONObject roomIdRemoveMsg = new JSONObject();
             roomIdRemoveMsg.put("type", "deleteroom");
-            roomIdRemoveMsg.put("clientid", clientId);
+            roomIdRemoveMsg.put("roomid", ownedRoomId);
             roomIdRemoveMsg.put("serverid", ServerConnectionManager.getServerId());
             ServerConnectionManager.broadcast(roomIdRemoveMsg);
+            ownedRoomId = null;
 //            delRoomMsg.put("approved", "true");
 //            sendMessage(delRoomMsg);
         }
